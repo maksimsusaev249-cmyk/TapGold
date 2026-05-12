@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Золотой Кликер — Крипто Биржа</title>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#0d0d0d;--card:#1a1a1a;--card2:#252525;--border:#333;--fg:#f0e6d2;--muted:#8a7e6b;--accent:#f5a623;--accent2:#ff6b35;--gold:#ffd700;--success:#4caf50;--danger:#e74c3c;--info:#2196f3;--purple:#9c27b0;--crypto-up:#00c853;--crypto-down:#ff1744}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden}
+h1,h2,h3,.russo{font-family:'Russo One',sans-serif}
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.screen{display:none;padding:16px 16px 100px;position:relative;z-index:1}.screen.active{display:block;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.g-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border:none;background:none;color:var(--muted);font-size:9px;font-weight:700;cursor:pointer;transition:.2s;position:relative}
+.nav-btn i{font-size:18px;transition:.2s}.nav-btn.active{color:var(--accent)}.nav-btn.active i{transform:scale(1.1);text-shadow:0 0 10px var(--accent)}.nav-btn:hover{color:var(--accent)}
+.badge{position:absolute;top:2px;right:50%;transform:translateX(12px);background:var(--danger);color:#fff;font-size:8px;padding:1px 4px;border-radius:10px}
+.click-zone{position:relative;width:200px;height:200px;margin:0 auto;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.click-coin{width:160px;height:160px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe082,#f5a623 50%,#c77800);box-shadow:0 0 40px rgba(245,166,35,.3),inset 0 -4px 12px rgba(0,0,0,.3),inset 0 4px 8px rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:50px;color:#5a3e00;transition:transform .08s;position:relative;z-index:2}
+.click-coin:active{transform:scale(.92)}.click-coin::after{content:'';position:absolute;top:12%;left:18%;width:30%;height:20%;background:rgba(255,255,255,.35);border-radius:50%;transform:rotate(-30deg)}
+.click-ring{position:absolute;width:100%;height:100%;border:3px solid var(--accent);border-radius:50%;animation:pulse 2s infinite;opacity:.4}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.08);opacity:.6}}
+.float-num{position:absolute;pointer-events:none;font-family:'Russo One',sans-serif;font-size:24px;color:var(--gold);z-index:10;animation:floatUp .9s forwards;text-shadow:0 0 8px rgba(255,215,0,.5)}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-100px) scale(1.3)}}
+.float-num.crit{font-size:36px;color:var(--accent2);animation:floatCrit .9s forwards}
+@keyframes floatCrit{0%{opacity:1;transform:translateY(0) scale(1.2)}50%{transform:translateY(-50px) scale(1.8)}100%{opacity:0;transform:translateY(-120px) scale(1)}}
+.burst{position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(245,166,35,.25),transparent 70%);animation:burst .4s forwards;pointer-events:none;z-index:1}
+@keyframes burst{0%{transform:scale(1);opacity:1}100%{transform:scale(2);opacity:0}}
+.prog-bar{height:8px;background:var(--card2);border-radius:4px;overflow:hidden}.prog-fill{height:100%;border-radius:4px;transition:width .4s;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.g-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;cursor:pointer;transition:.2s}
+.g-btn:active{transform:scale(.95)}.g-btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000}.g-btn-primary:hover{box-shadow:0 0 20px rgba(245,166,35,.4)}
+.g-btn-secondary{background:var(--card2);color:var(--fg);border:1px solid var(--border)}.g-btn-secondary:hover{border-color:var(--accent)}
+.g-btn-success{background:var(--success);color:#fff}.g-btn-danger{background:var(--danger);color:#fff}.g-btn-info{background:var(--info);color:#fff}.g-btn-purple{background:var(--purple);color:#fff}
+.g-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.pill{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--card);border:1px solid var(--border);border-radius:20px;font-weight:800;font-size:13px;cursor:pointer;transition:.2s}.pill:hover{border-color:var(--accent)}
+.toast-container{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;animation:tIn .3s,tOut .3s 2.5s forwards;box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:auto}
+@keyframes tIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}@keyframes tOut{to{opacity:0;transform:translateY(-20px)}}
+.toast-gold{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000}.toast-success{background:var(--success);color:#fff}.toast-error{background:var(--danger);color:#fff}.toast-info{background:var(--info);color:#fff}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;max-width:400px;width:100%;max-height:85vh;overflow-y:auto}
+.r1{color:#4caf50}.r2{color:#2196f3}.r3{color:#9c27b0}.r4{color:#ff6b35}.rb1{background:rgba(76,175,80,.15)}.rb2{background:rgba(33,150,243,.15)}.rb3{background:rgba(156,39,176,.15)}.rb4{background:rgba(255,107,53,.15)}.rbr1{border-color:#4caf50}.rbr2{border-color:#2196f3}.rbr3{border-color:#9c27b0}.rbr4{border-color:#ff6b35}
+.inv-card{border-width:2px;transition:.2s}.inv-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.lvl-flash{position:fixed;inset:0;z-index:9998;pointer-events:none;background:radial-gradient(circle,rgba(255,215,0,.3),transparent 70%);animation:lvlF .8s forwards}
+@keyframes lvlF{to{opacity:0}}
+.link-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px;word-break:break-all;font-size:13px;color:var(--accent);cursor:pointer}
+.friend-banner{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;border-radius:16px;padding:16px;margin-bottom:16px}
+.auto-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);animation:aPulse 1s infinite}
+@keyframes aPulse{0%,100%{opacity:1}50%{opacity:.3}}
+.chart-wrap{position:relative;height:180px;background:var(--card2);border-radius:12px;overflow:hidden;margin:12px 0}
+.chart-wrap canvas{width:100%;height:100%}
+.up{color:var(--crypto-up)}.down{color:var(--crypto-down)}
+.tkn-logo{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff1744);display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:18px}
+.trade-toggle{display:flex;background:var(--card2);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.trade-toggle button{flex:1;padding:10px;border:none;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;cursor:pointer;background:transparent;color:var(--muted);transition:.2s}
+.trade-toggle button.active-buy{background:var(--crypto-up);color:#000}.trade-toggle button.active-sell{background:var(--crypto-down);color:#fff}
+.wallet-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;background:rgba(0,200,83,.15);color:var(--crypto-up)}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="toast-container" id="toasts"></div>
+
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-2" style="background:linear-gradient(180deg,var(--bg) 60%,transparent)">
+  <div class="pill" onclick="showProfile()"><i class="fas fa-coins" style="color:var(--gold)"></i><span id="hd-coins">0</span></div>
+  <div class="pill" onclick="showProfile()"><i class="fas fa-user" style="color:var(--accent)"></i><span id="hd-name">Игрок</span></div>
+  <div class="pill" id="hd-auto" style="display:none"><span class="auto-dot"></span><span id="hd-auto-val">0/с</span></div>
+</header>
+
+<main class="pt-14">
+  <section class="screen active" id="scr-main">
+    <div class="text-center mb-4">
+      <div class="text-sm font-bold" style="color:var(--muted)">Ваше золото</div>
+      <div class="russo text-4xl mt-1" style="color:var(--gold)" id="main-coins">0</div>
+      <div class="text-xs mt-1" style="color:var(--muted)">Сила: <span id="main-pow" style="color:var(--accent)">1</span> · Ур. <span id="main-lvl">1</span></div>
+    </div>
+    <div class="click-zone" id="click-zone"><div class="click-ring"></div><div class="click-coin">$</div></div>
+    <div class="text-center mt-4">
+      <div class="prog-bar mx-auto" style="max-width:260px"><div class="prog-fill" id="exp-bar" style="width:0%"></div></div>
+      <div class="text-xs mt-1" style="color:var(--muted)"><span id="exp-cur">0</span> / <span id="exp-need">100</span></div>
+    </div>
+    <div class="g-card mt-6 text-center">
+      <div class="font-bold mb-2" style="color:var(--accent)"><i class="fas fa-gift mr-1"></i>Ежедневный бонус</div>
+      <button class="g-btn g-btn-primary" id="daily-btn" onclick="claimDaily()"><i class="fas fa-hand-sparkles"></i> Забрать</button>
+      <div class="text-xs mt-2" style="color:var(--muted)" id="daily-timer"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-shop">
+    <h2 class="russo text-2xl mb-4" style="color:var(--accent)"><i class="fas fa-store mr-2"></i>Магазин</h2>
+    <div class="flex gap-2 mb-4 flex-wrap">
+      <button class="g-btn g-btn-primary stab" data-t="upgrades" onclick="shopTab('upgrades')">Улучшения</button>
+      <button class="g-btn g-btn-secondary stab" data-t="market" onclick="shopTab('market')">Рынок</button>
+      <button class="g-btn g-btn-secondary stab" data-t="inv" onclick="shopTab('inv')">Инвентарь</button>
+    </div>
+    <div id="shop-out"></div>
+  </section>
+
+  <section class="screen" id="scr-crypto">
+    <h2 class="russo text-2xl mb-4" style="color:var(--accent)"><i class="fas fa-chart-line mr-2"></i>Крипто Биржа</h2>
+    <div id="crypto-out"></div>
+  </section>
+
+  <section class="screen" id="scr-quests">
+    <h2 class="russo text-2xl mb-4" style="color:var(--accent)"><i class="fas fa-scroll mr-2"></i>Задания</h2>
+    <div class="flex gap-2 mb-4">
+      <button class="g-btn g-btn-primary qtab" data-t="daily" onclick="questTab('daily')">Ежедневные</button>
+      <button class="g-btn g-btn-secondary qtab" data-t="achieve" onclick="questTab('achieve')">Достижения</button>
+    </div>
+    <div id="quest-out"></div>
+  </section>
+
+  <section class="screen" id="scr-clan">
+    <h2 class="russo text-2xl mb-4" style="color:var(--accent)"><i class="fas fa-shield-halved mr-2"></i>Клан</h2>
+    <div id="clan-out"></div>
+  </section>
+
+  <section class="screen" id="scr-social">
+    <h2 class="russo text-2xl mb-4" style="color:var(--accent)"><i class="fas fa-users mr-2"></i>Друзья и Рейтинг</h2>
+    <div id="freq-area"></div>
+    <div class="flex gap-2 mb-4">
+      <button class="g-btn g-btn-primary ftab" data-t="friends" onclick="socTab('friends')">Друзья</button>
+      <button class="g-btn g-btn-secondary ftab" data-t="lb" onclick="socTab('lb')">Рейтинг</button>
+    </div>
+    <div id="soc-out"></div>
+  </section>
+</main>
+
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex justify-around py-2" style="background:linear-gradient(0deg,var(--bg) 80%,transparent);border-top:1px solid var(--border)">
+  <button class="nav-btn active" onclick="go('scr-main',this)"><i class="fas fa-coins"></i><span>Клик</span></button>
+  <button class="nav-btn" onclick="go('scr-shop',this)"><i class="fas fa-store"></i><span>Магазин</span></button>
+  <button class="nav-btn" onclick="go('scr-crypto',this)"><i class="fas fa-chart-line"></i><span>Биржа</span></button>
+  <button class="nav-btn" onclick="go('scr-quests',this)"><i class="fas fa-scroll"></i><span>Задания</span><span class="badge" id="q-badge" style="display:none">0</span></button>
+  <button class="nav-btn" onclick="go('scr-clan',this)"><i class="fas fa-shield-halved"></i><span>Клан</span></button>
+  <button class="nav-btn" onclick="go('scr-social',this)"><i class="fas fa-users"></i><span>Рейтинг</span></button>
+</nav>
+
+<script>
+const SK='gc_v9_friendcode';
+
+const UPGRADES=[
+  {id:'c1',n:'Укрепление пальца',d:'Сила +1',ic:'fa-hand-pointer',bc:50,cm:1.5,ef:'pow',v:1,mx:50},
+  {id:'a1',n:'Золотой рудник',d:'Авто +1/с',ic:'fa-mountain',bc:200,cm:1.6,ef:'auto',v:1,mx:30},
+  {id:'c5',n:'Алхимия клика',d:'Сила +5',ic:'fa-flask',bc:2000,cm:1.8,ef:'pow',v:5,mx:20},
+  {id:'a5',n:'Золотая печать',d:'Авто +5/с',ic:'fa-stamp',bc:10000,cm:2,ef:'auto',v:5,mx:15},
+  {id:'cr',n:'Острый глаз',d:'Крит +5%',ic:'fa-eye',bc:5000,cm:2.2,ef:'crit',v:5,mx:15},
+  {id:'cm',n:'Сила крита',d:'xКрит +0.5',ic:'fa-bolt',bc:8000,cm:2.5,ef:'critM',v:.5,mx:10},
+  {id:'c25',n:'Драконий палец',d:'Сила +25',ic:'fa-dragon',bc:100000,cm:2,ef:'pow',v:25,mx:10},
+  {id:'a25',n:'Империя золота',d:'Авто +25/с',ic:'fa-crown',bc:250000,cm:2.5,ef:'auto',v:25,mx:8},
+];
+const ITEMS=[
+  {id:'ore',n:'Железная руда',ic:'fa-cube',r:1,bp:200,d:'Обычный ресурс'},
+  {id:'herb',n:'Целебная трава',ic:'fa-leaf',r:1,bp:350,d:'Ингредиент'},
+  {id:'crystal',n:'Лазурный кристалл',ic:'fa-diamond',r:2,bp:1500,d:'Редкий минерал'},
+  {id:'scroll',n:'Свиток мудрости',ic:'fa-scroll',r:2,bp:2500,d:'Древние знания'},
+  {id:'gem',n:'Зачарованный изумруд',ic:'fa-gem',r:3,bp:12000,d:'Сияет магией'},
+  {id:'feather',n:'Перо феникса',ic:'fa-feather-pointed',r:3,bp:25000,d:'Золотое пламя'},
+  {id:'heart',n:'Сердце дракона',ic:'fa-heart',r:4,bp:100000,d:'Невероятная сила'},
+  {id:'crown',n:'Корона веков',ic:'fa-crown',r:4,bp:250000,d:'Легендарный артефакт'},
+];
+const RN={1:'Обычный',2:'Редкий',3:'Эпический',4:'Легендарный'};
+const DQT=[
+  {id:'d1',d:'Кликни {n} раз',t:'clicks',tg:100,rw:500,ic:'fa-hand-pointer'},
+  {id:'d2',d:'Заработай {n} золота',t:'earn',tg:1000,rw:800,ic:'fa-coins'},
+  {id:'d3',d:'Купи {n} улучшений',t:'buy',tg:3,rw:600,ic:'fa-cart-shopping'},
+  {id:'d4',d:'Продай {n} предметов',t:'sell',tg:1,rw:1000,ic:'fa-store'},
+  {id:'d5',d:'Достигни уровня {n}',t:'level',tg:5,rw:1500,ic:'fa-star'},
+];
+const ACH=[
+  {id:'a1',n:'Первый шаг',d:'Кликни 1 раз',t:'clicks',tg:1,rw:100,ic:'fa-shoe-prints'},
+  {id:'a2',n:'Начинающий',d:'Кликни 100 раз',t:'clicks',tg:100,rw:500,ic:'fa-hand-pointer'},
+  {id:'a3',n:'Опытный',d:'Кликни 1000 раз',t:'clicks',tg:1000,rw:2000,ic:'fa-hand-fist'},
+  {id:'a4',n:'Богатей',d:'Заработай 100K',t:'total',tg:100000,rw:5000,ic:'fa-gem'},
+  {id:'a5',n:'Коллекционер',d:'Собери 5 предметов',t:'items',tg:5,rw:3000,ic:'fa-box-open'},
+  {id:'a6',n:'Торговец',d:'Продай 3 предмета',t:'sold',tg:3,rw:2000,ic:'fa-store'},
+  {id:'a7',n:'Клановый',d:'Вступи в клан',t:'clan',tg:1,rw:2000,ic:'fa-shield-halved'},
+  {id:'a8',n:'Уровень 10',d:'Достигни 10 уровня',t:'level',tg:10,rw:5000,ic:'fa-star'},
+  {id:'a9',n:'Крипто-новичок',d:'Купи первый токен',t:'cryptoBuy',tg:1,rw:1000,ic:'fa-chart-line'},
+];
+const CLANS=[
+  {id:'c1',n:'Тёмные Рыцари',d:'Воины тьмы',ic:'fa-chess-knight',cl:'#e74c3c',rq:5},
+  {id:'c2',n:'Золотая Лига',d:'Элита кликеров',ic:'fa-coins',cl:'#ffd700',rq:10},
+  {id:'c3',n:'Титаны',d:'Легенды',ic:'fa-mountain-sun',cl:'#2196f3',rq:15},
+  {id:'c4',n:'Алхимики',d:'Клики в золото',ic:'fa-flask-vial',cl:'#4caf50',rq:3},
+  {id:'c5',n:'Драконий Орден',d:'Хранители',ic:'fa-dragon',cl:'#ff6b35',rq:20},
+];
+// Боты теперь имеют коды дружбы!
+const BOTS=[
+  {id:'b1',n:'Золотой_Мастер',l:15, fc:'F-GOLD-777'},
+  {id:'b2',n:'Кликер2024',l:8, fc:'F-CLK-2024'},
+  {id:'b3',n:'ТёмныйРыцарь',l:22, fc:'F-DARK-KN1'}
+];
+
+let G;
+let curScr='scr-main';
+let _pendingFR=null;
+let _tradeFriend=null;
+let resetFlag=false;
+
+function defG(){return{coins:0,tCoins:0,tClicks:0,tCrits:0,tBuys:0,maxCl:0,pow:1,auto:0,crit:0,critM:2,lvl:1,xp:0,xpN:100,upg:{},qp:{},dailyT:0,clan:null,chat:[],name:'Игрок',pid:'p'+Date.now().toString(36)+Math.random().toString(36).substr(2,4),friends:[],fSent:{},inv:[],sold:0,mkDay:0,mkP:{},tkn:0,tknPrice:10,tknHist:[10],staked:0,walletConnected:false,tradeMode:'buy',friendCode:''}}
+
+function genFC(){return'F-'+Math.random().toString(36).substr(2,4).toUpperCase()+'-'+Math.random().toString(36).substr(2,4).toUpperCase()}
+
+function load(){
+  try{
+    let d=localStorage.getItem(SK);
+    if(d){
+      let p=JSON.parse(d);
+      G={...defG(),...p};
+      if(!Array.isArray(G.tknHist))G.tknHist=[G.tknPrice||10];
+      if(!Array.isArray(G.inv))G.inv=[];
+      if(!Array.isArray(G.friends))G.friends=[];
+      if(!Array.isArray(G.chat))G.chat=[];
+      if(!G.friendCode)G.friendCode=genFC();
+    } else { G=defG(); G.friendCode=genFC(); }
+  } catch(e){ G=defG(); G.friendCode=genFC(); }
+}
+function save(){try{localStorage.setItem(SK,JSON.stringify(G))}catch(e){}}
+
+function f(n){if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.floor(n).toLocaleString('ru')}
+function fDec(n,d=2){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toFixed(d)}
+function toast(m,t='gold'){let c=document.getElementById('toasts'),e=document.createElement('div');e.className='toast toast-'+t;e.textContent=m;c.appendChild(e);setTimeout(()=>e.remove(),3000)}
+function modal(h){document.querySelectorAll('.modal-overlay').forEach(m=>m.remove());let o=document.createElement('div');o.className='modal-overlay';o.innerHTML='<div class="modal-box">'+h+'</div>';o.onclick=e=>{if(e.target===o)o.remove()};document.body.appendChild(o);return o}
+function closeM(){document.querySelectorAll('.modal-overlay').forEach(m=>m.remove())}
+
+function invQ(id){let i=G.inv.find(x=>x.id===id);return i?i.q:0}
+function invAdd(id,q=1){let i=G.inv.find(x=>x.id===id);if(i)i.q+=q;else G.inv.push({id,q})}
+function invRem(id,q=1){let i=G.inv.find(x=>x.id===id);if(!i)return false;i.q-=q;if(i.q<=0)G.inv=G.inv.filter(x=>x.id!==id);return true}
+function mkPrices(){let d=Math.floor(Date.now()/86400000);if(G.mkDay===d)return;G.mkDay=d;G.mkP={};ITEMS.forEach(it=>{let h=0;for(let c=0;c<(it.id+d).length;c++)h=Math.imul(31,h)+(it.id+d).charCodeAt(c)|0;G.mkP[it.id]=Math.floor(it.bp*(0.7+Math.abs(h)%70/100))})}
+
+function go(id,btn){curScr=id;document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');if(id==='scr-shop')renderShop();if(id==='scr-crypto')renderCrypto();if(id==='scr-quests')renderQ();if(id==='scr-clan')renderClan();if(id==='scr-social')renderSoc()}
+
+function showProfile(){
+  modal(`<h3 class="russo text-xl mb-4" style="color:var(--accent)"><i class="fas fa-user-circle mr-2"></i>Профиль</h3>
+  <div class="flex items-center gap-4 mb-4"><div class="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold" style="background:var(--accent)22;color:var(--accent)">${G.name[0]}</div><div><div class="russo text-lg">${G.name}</div><div class="text-sm" style="color:var(--muted)">Ур.${G.lvl}</div></div></div>
+  <div class="g-card" style="margin:0 0 16px;border-color:var(--info)">
+    <div class="text-xs font-bold" style="color:var(--muted)">Ваш код дружбы:</div>
+    <div class="flex items-center gap-2 mt-1"><span class="russo text-lg" style="color:var(--info)">${G.friendCode}</span><button class="g-btn g-btn-info text-xs" onclick="copyFC('${G.friendCode}')"><i class="fas fa-copy"></i></button></div>
+    <div class="text-xs mt-1" style="color:var(--muted)">Поделитесь им, чтобы друзья могли вас найти!</div>
+  </div>
+  <div class="mb-4"><label class="text-sm font-bold" style="color:var(--muted)">Изменить имя</label><div class="flex gap-2 mt-1"><input id="nm-in" type="text" maxlength="16" value="${G.name}" class="flex-1 px-3 py-2 rounded-lg" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none"><button class="g-btn g-btn-primary" onclick="chName()"><i class="fas fa-check"></i></button></div></div>
+  <div class="g-card" style="margin:0"><div class="grid grid-cols-2 gap-2 text-sm"><div>Кликов: <strong>${f(G.tClicks)}</strong></div><div>Золота: <strong style="color:var(--gold)">${f(G.tCoins)}</strong></div><div>$GCLK: <strong style="color:var(--crypto-up)">${fDec(G.tkn)}</strong></div><div>В стейке: <strong>${fDec(G.staked)}</strong></div></div></div>
+  <button class="g-btn g-btn-danger w-full mt-4" onclick="resetGame()"><i class="fas fa-trash"></i> Сбросить прогресс</button>`)
+}
+function chName(){let n=document.getElementById('nm-in')?.value?.trim();if(!n)return toast('Пусто!','error');G.name=n;toast('Имя: '+n,'success');ui();save();closeM()}
+function resetGame(){if(!resetFlag){resetFlag=true;toast('Нажмите ещё раз для сброса!','error');return}localStorage.removeItem(SK);location.reload()}
+function copyFC(code){fallbackCopy(code);toast('Код скопирован!','success')}
+function fallbackCopy(text){let ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(ta)}
+
+function doClick(e){
+  let zone=document.getElementById('click-zone'),rect=zone.getBoundingClientRect(),isCrit=false,pw=G.pow;
+  if(G.crit>0&&Math.random()*100<G.crit){isCrit=true;pw=Math.floor(pw*G.critM);G.tCrits++}
+  G.coins+=pw;G.tCoins+=pw;G.tClicks++;if(pw>G.maxCl)G.maxCl=pw;G.xp+=Math.max(1,Math.floor(pw/5));
+  let fn=document.createElement('div');fn.className='float-num'+(isCrit?' crit':'');fn.textContent=(isCrit?'КРИТ! +':'')+f(pw);
+  let cx=(e.clientX||(rect.left+rect.width/2))-rect.left-30,cy=(e.clientY||(rect.top+rect.height/2))-rect.top-20;
+  fn.style.left=cx+'px';fn.style.top=cy+'px';zone.appendChild(fn);setTimeout(()=>fn.remove(),1000);
+  let b=document.createElement('div');b.className='burst';b.style.left='20px';b.style.top='20px';zone.appendChild(b);setTimeout(()=>b.remove(),500);
+  lvlUp();ui()
+}
+function lvlUp(){while(G.xp>=G.xpN){G.xp-=G.xpN;G.lvl++;G.xpN=Math.floor(100*Math.pow(1.3,G.lvl-1));G.pow+=Math.max(1,Math.floor(G.lvl/3));toast('Уровень '+G.lvl+'!','gold');let fl=document.createElement('div');fl.className='lvl-flash';document.body.appendChild(fl);setTimeout(()=>fl.remove(),900)}}
+document.getElementById('click-zone').addEventListener('click',doClick);
+
+let cShop='upgrades';
+function shopTab(t){cShop=t;document.querySelectorAll('.stab').forEach(b=>{b.classList.toggle('g-btn-primary',b.dataset.t===t);b.classList.toggle('g-btn-secondary',b.dataset.t!==t)});renderShop()}
+function upgCost(u){return Math.floor(u.bc*Math.pow(u.cm,G.upg[u.id]||0))}
+function buyUpg(id){let u=UPGRADES.find(x=>x.id===id);if(!u)return;let lv=G.upg[u.id]||0;if(lv>=u.mx)return toast('Макс!','error');let c=upgCost(u);if(G.coins<c)return toast('Мало золота!','error');G.coins-=c;G.upg[u.id]=lv+1;G.tBuys++;if(u.ef==='pow')G.pow+=u.v;if(u.ef==='auto')G.auto+=u.v;if(u.ef==='crit')G.crit+=u.v;if(u.ef==='critM')G.critM+=u.v;toast(u.n+' ур.'+(lv+1),'success');renderShop();ui()}
+function buyItem(id){let it=ITEMS.find(x=>x.id===id);if(!it)return;mkPrices();let p=G.mkP[id];if(G.coins<p)return toast('Мало золота!','error');G.coins-=p;invAdd(id);G.tBuys++;toast('Куплен: '+it.n,'success');renderShop();ui()}
+function sellItem(id){let it=ITEMS.find(x=>x.id===id);if(!it)return;if(!invRem(id))return toast('Нет предмета!','error');let sp=Math.floor(it.bp*0.6);G.coins+=sp;G.tCoins+=sp;G.sold++;toast('Продано: '+it.n+' за '+f(sp),'gold');qProg('sell',1);renderShop();ui()}
+
+function renderShop(){
+  let o=document.getElementById('shop-out');
+  if(cShop==='upgrades'){
+    o.innerHTML=UPGRADES.map(u=>{let lv=G.upg[u.id]||0,c=upgCost(u),mx=lv>=u.mx,ok=G.coins>=c&&!mx;return`<div class="g-card flex items-center gap-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(245,166,35,.15);color:var(--accent)"><i class="fas ${u.ic}"></i></div><div class="flex-1 min-w-0"><div class="font-bold text-sm">${u.n} <span style="color:var(--muted)">ур.${lv}</span></div><div class="text-xs" style="color:var(--muted)">${u.d}</div></div><button class="g-btn ${ok?'g-btn-primary':'g-btn-secondary'}" onclick="buyUpg('${u.id}')" ${ok?'':'disabled'}>${mx?'MAX':f(c)+' <i class="fas fa-coins" style="color:var(--gold)"></i>'}</button></div>`}).join('')
+  }else if(cShop==='market'){
+    mkPrices();
+    o.innerHTML=ITEMS.map(it=>{let p=G.mkP[it.id],ok=G.coins>=p,r=it.r;return`<div class="g-card inv-card rbr${r}"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl rb${r} r${r}"><i class="fas ${it.ic}"></i></div><div class="flex-1 min-w-0"><div class="font-bold text-sm r${r}">${it.n} <span class="text-xs r${r}">${RN[r]}</span></div><div class="text-xs mt-1">Купить: <strong style="color:var(--gold)">${f(p)}</strong></div></div><button class="g-btn ${ok?'g-btn-primary':'g-btn-secondary'}" onclick="buyItem('${it.id}')" ${ok?'':'disabled'}><i class="fas fa-cart-plus"></i></button></div></div>`}).join('')
+  }else{
+    let tot=G.inv.reduce((s,i)=>s+i.q,0);
+    if(!tot){o.innerHTML='<div class="text-center py-8" style="color:var(--muted)"><i class="fas fa-box-open text-4xl mb-3" style="color:var(--border)"></i><div>Инвентарь пуст</div></div>';return}
+    o.innerHTML=G.inv.map(iv=>{let it=ITEMS.find(x=>x.id===iv.id);if(!it)return'';let sp=Math.floor(it.bp*.6),r=it.r;return`<div class="g-card inv-card rbr${r}"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl rb${r} r${r}"><i class="fas ${it.ic}"></i></div><div class="flex-1 min-w-0"><div class="font-bold text-sm r${r}">${it.n} <span style="color:var(--muted)">x${iv.q}</span></div><div class="text-xs mt-1">Продажа: <strong style="color:var(--success)">${f(sp)}</strong></div></div><button class="g-btn g-btn-success" onclick="sellItem('${it.id}')"><i class="fas fa-coins"></i></button></div></div>`}).join('')
+  }
+}
+
+// Крипто
+function renderCrypto(){
+  let o=document.getElementById('crypto-out');
+  let priceChg=G.tknHist.length>1?G.tknPrice-G.tknHist[G.tknHist.length-2]:0;
+  let chgPct=G.tknHist.length>1&&G.tknHist[G.tknHist.length-2]?((priceChg/G.tknHist[G.tknHist.length-2])*100).toFixed(2):0;
+  let isUp=priceChg>=0;
+  o.innerHTML=`
+    <div class="g-card" style="border-color:var(--accent)">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2"><div class="tkn-logo">G</div><div><div class="font-bold text-lg">$GCLK</div><div class="text-xs" style="color:var(--muted)">Golden Click Token</div></div></div>
+        ${G.walletConnected?'<span class="wallet-badge"><i class="fas fa-check-circle"></i> TON</span>':'<button class="g-btn g-btn-info text-xs" onclick="connectWallet()"><i class="fas fa-wallet"></i> Кошелёк</button>'}
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div><div class="text-xs" style="color:var(--muted)">Баланс</div><div class="russo text-xl" style="color:var(--crypto-up)">${fDec(G.tkn)}</div></div>
+        <div><div class="text-xs" style="color:var(--muted)">Стейкинг</div><div class="russo text-xl" style="color:var(--accent)">${fDec(G.staked)}</div></div>
+      </div>
+    </div>
+    <div class="g-card">
+      <div class="flex justify-between items-end mb-1">
+        <div><div class="text-xs" style="color:var(--muted)">Цена</div><div class="russo text-2xl ${isUp?'up':'down'}">${f(G.tknPrice)} <i class="fas fa-coins" style="color:var(--gold);font-size:16px"></i></div></div>
+        <div class="text-right"><div class="text-sm font-bold ${isUp?'up':'down'}"><i class="fas fa-caret-${isUp?'up':'down'}"></i> ${Math.abs(chgPct)}%</div></div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-canvas"></canvas></div>
+    </div>
+    <div class="g-card">
+      <div class="trade-toggle">
+        <button class="${G.tradeMode==='buy'?'active-buy':''}" onclick="G.tradeMode='buy';renderCrypto()">Купить</button>
+        <button class="${G.tradeMode==='sell'?'active-sell':''}" onclick="G.tradeMode='sell';renderCrypto()">Продать</button>
+      </div>
+      ${G.tradeMode==='buy'?`
+        <div class="text-sm mb-2" style="color:var(--muted)">1 $GCLK = ${f(G.tknPrice)} золота</div>
+        <div class="flex gap-2 mb-2">
+          <input id="buy-amt" type="number" min="1" value="1" class="flex-1 px-3 py-2 rounded-lg" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none">
+          <button class="g-btn g-btn-success" onclick="buyTkn()"><i class="fas fa-cart-plus"></i></button>
+        </div>`:`
+        <div class="text-sm mb-2" style="color:var(--muted)">1 $GCLK = ${f(G.tknPrice)} золота</div>
+        <div class="flex gap-2 mb-2">
+          <input id="sell-amt" type="number" min="1" value="1" class="flex-1 px-3 py-2 rounded-lg" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none">
+          <button class="g-btn g-btn-danger" onclick="sellTkn()"><i class="fas fa-hand-holding-dollar"></i></button>
+        </div>`}
+    </div>
+    <div class="g-card">
+      <div class="font-bold mb-2" style="color:var(--accent)"><i class="fas fa-landmark mr-1"></i>Стейкинг (10% / час)</div>
+      <div class="text-sm mb-3" style="color:var(--muted)">Заморозьте токены и получайте пассивный доход.</div>
+      <div class="flex gap-2 mb-2">
+        <input id="stake-amt" type="number" min="1" value="1" class="flex-1 px-3 py-2 rounded-lg" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none">
+        <button class="g-btn g-btn-primary" onclick="stakeTkn()"><i class="fas fa-lock"></i></button>
+      </div>
+      ${G.staked>0?`<button class="g-btn g-btn-danger w-full" onclick="unstakeTkn()"><i class="fas fa-lock-open"></i> Разморозить всё</button>`:''}
+    </div>
+    <div class="g-card text-center">
+      <div class="font-bold mb-2" style="color:var(--info)"><i class="fas fa-parachute-box mr-1"></i>Airdrop</div>
+      <div class="text-sm mb-3" style="color:var(--muted)">Вывод $GCLK в TON после листинга.</div>
+      <button class="g-btn ${G.walletConnected?'g-btn-success':'g-btn-secondary'}" onclick="airdropAction()" ${G.walletConnected?'':'disabled'}><i class="fas fa-rocket"></i> ${G.walletConnected?'Вывести':'Подключите кошелёк'}</button>
+    </div>`;
+  drawChart();
+}
+function buyTkn(){let a=parseInt(document.getElementById('buy-amt')?.value||0);if(a<1)return toast('Мин 1','error');let c=a*G.tknPrice;if(G.coins<c)return toast('Мало золота!','error');G.coins-=c;G.tkn+=a;qProg('cryptoBuy',1);toast('Куплено '+a+' $GCLK','success');renderCrypto();ui();save()}
+function sellTkn(){let a=parseInt(document.getElementById('sell-amt')?.value||0);if(a<1)return toast('Мин 1','error');if(G.tkn<a)return toast('Мало токенов','error');let g=a*G.tknPrice;G.tkn-=a;G.coins+=g;G.tCoins+=g;toast('Продано за '+f(g),'gold');renderCrypto();ui();save()}
+function stakeTkn(){let a=parseInt(document.getElementById('stake-amt')?.value||0);if(a<1)return toast('Мин 1','error');if(G.tkn<a)return toast('Мало токенов','error');G.tkn-=a;G.staked+=a;toast(a+' в стейке','success');renderCrypto();save()}
+function unstakeTkn(){G.tkn+=G.staked;toast(G.staked+' разморожено','success');G.staked=0;renderCrypto();save()}
+function connectWallet(){G.walletConnected=true;toast('TON подключён!','success');renderCrypto();save()}
+function airdropAction(){modal(`<h3 class="russo text-xl mb-4" style="color:var(--info)"><i class="fas fa-rocket mr-2"></i>Вывод</h3><p class="text-sm mb-4" style="color:var(--muted)">Токены будут отправлены после TGE.</p><div class="g-card text-center" style="margin:0;border-color:var(--info)"><div class="russo text-2xl" style="color:var(--crypto-up)">${fDec(G.tkn)} $GCLK</div></div><button class="g-btn g-btn-info w-full mt-4" onclick="toast('Заявка принята!','success');closeM()">Подать заявку</button>`)}
+
+function updPrice(){
+  let change=(Math.random()-.48)*G.tknPrice*0.06;
+  G.tknPrice=Math.max(1,G.tknPrice+change);
+  G.tknHist.push(G.tknPrice);
+  if(G.tknHist.length>40)G.tknHist.shift();
+  if(curScr==='scr-crypto')renderCrypto();
+}
+function drawChart(){
+  let cvs=document.getElementById('chart-canvas');if(!cvs)return;
+  let ctx=cvs.getContext('2d'),w=cvs.parentElement.clientWidth,h=cvs.parentElement.clientHeight;
+  if(w<10||h<10)return;
+  cvs.width=w;cvs.height=h;
+  let data=G.tknHist;if(!Array.isArray(data)||data.length<2)return;
+  let min=Math.min(...data)*0.95,max=Math.max(...data)*1.05;if(min===max){min-=5;max+=5}
+  ctx.clearRect(0,0,w,h);
+  ctx.beginPath();ctx.moveTo(0,h);
+  data.forEach((v,i)=>{let x=(i/(data.length-1))*w,y=h-((v-min)/(max-min))*h;ctx.lineTo(x,y)});
+  ctx.lineTo(w,h);ctx.closePath();
+  let isUp=data[data.length-1]>=data[0];
+  let grd=ctx.createLinearGradient(0,0,0,h);
+  grd.addColorStop(0,isUp?'rgba(0,200,83,0.3)':'rgba(255,23,68,0.3)');
+  grd.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grd;ctx.fill();
+  ctx.beginPath();
+  data.forEach((v,i)=>{let x=(i/(data.length-1))*w,y=h-((v-min)/(max-min))*h;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+  ctx.strokeStyle=isUp?'#00c853':'#ff1744';ctx.lineWidth=2.5;ctx.stroke();
+}
+
+// Задания
+let cQ='daily';
+function questTab(t){cQ=t;document.querySelectorAll('.qtab').forEach(b=>{b.classList.toggle('g-btn-primary',b.dataset.t===t);b.classList.toggle('g-btn-secondary',b.dataset.t!==t)});renderQ()}
+function getDQ(){let d=Math.floor(Date.now()/86400000),q=[];for(let i=0;i<4;i++){let t=DQT[(d+i*3)%DQT.length],ml=1+Math.floor(G.lvl/5),tg=Math.floor(t.tg*ml),rw=Math.floor(t.rw*ml);q.push({...t,d:t.d.replace('{n}',f(tg)),tg,rw,prog:G.qp['dq_'+t.id+'_'+d]||0,done:!!G.qp['dq_'+t.id+'_'+d+'_d'],qid:'dq_'+t.id+'_'+d})}return q}
+function getAV(t){if(t==='clicks')return G.tClicks;if(t==='total')return G.tCoins;if(t==='buy')return G.tBuys;if(t==='sell')return G.sold;if(t==='level')return G.lvl;if(t==='clan')return G.clan?1:0;if(t==='items')return G.inv.reduce((s,i)=>s+i.q,0);if(t==='sold')return G.sold;if(t==='cryptoBuy')return G.tkn>0?1:0;return 0}
+function qProg(t,amt){getDQ().forEach(q=>{if(q.done||q.t!==t)return;if(!G.qp[q.qid])G.qp[q.qid]=0;G.qp[q.qid]=Math.min(q.tg,(G.qp[q.qid]||0)+amt)});ACH.forEach(a=>{G.qp['a_'+a.id]=getAV(a.t)});updBadge()}
+function claimQ(qid,rw){if(G.qp[qid+'_d'])return;G.qp[qid+'_d']=true;G.coins+=rw;G.tCoins+=rw;toast('Награда: +'+f(rw),'gold');renderQ();ui()}
+function claimA(id,rw){if(G.qp['a_'+id+'_d'])return;G.qp['a_'+id+'_d']=true;G.coins+=rw;G.tCoins+=rw;toast('Достижение! +'+f(rw),'gold');renderQ();ui()}
+function renderQ(){
+  let o=document.getElementById('quest-out');
+  if(cQ==='daily'){
+    o.innerHTML=getDQ().map(q=>{let pct=Math.min(100,(q.prog/q.tg)*100),ok=q.prog>=q.tg;return`<div class="g-card"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(245,166,35,.15);color:var(--accent)"><i class="fas ${q.ic}"></i></div><div class="flex-1"><div class="font-bold text-sm">${q.d}</div><div class="prog-bar mt-1"><div class="prog-fill" style="width:${pct}%"></div></div><div class="text-xs mt-1" style="color:var(--muted)">${Math.min(q.prog,q.tg)}/${q.tg}</div></div>${q.done?'<i class="fas fa-check-circle" style="color:var(--success);font-size:20px"></i>':ok?`<button class="g-btn g-btn-success" onclick="claimQ('${q.qid}',${q.rw})"><i class="fas fa-gift"></i></button>`:''}</div></div>`}).join('')
+  }else{
+    o.innerHTML=ACH.map(a=>{let v=getAV(a.t),pct=Math.min(100,(v/a.tg)*100),ok=v>=a.tg,d=!!G.qp['a_'+a.id+'_d'];return`<div class="g-card"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:${d?'rgba(76,175,80,.2)':'rgba(245,166,35,.15)'};color:${d?'var(--success)':'var(--accent)'}"><i class="fas ${a.ic}"></i></div><div class="flex-1"><div class="font-bold text-sm">${a.n}</div><div class="text-xs" style="color:var(--muted)">${a.d}</div><div class="prog-bar mt-1"><div class="prog-fill" style="width:${pct}%"></div></div></div>${d?'<i class="fas fa-check-circle" style="color:var(--success);font-size:20px"></i>':ok?`<button class="g-btn g-btn-success" onclick="claimA('${a.id}',${a.rw})"><i class="fas fa-gift"></i></button>`:''}</div></div>`}).join('')
+  }
+}
+function updBadge(){let c=0;getDQ().forEach(q=>{if(q.prog>=q.tg&&!q.done)c++});ACH.forEach(a=>{if(getAV(a.t)>=a.tg&&!G.qp['a_'+a.id+'_d'])c++});let b=document.getElementById('q-badge');if(c>0){b.style.display='block';b.textContent=c}else b.style.display='none'}
+
+// Клан
+function renderClan(){
+  let o=document.getElementById('clan-out');
+  if(G.clan){
+    let cl=CLANS.find(c=>c.id===G.clan)||{n:G.clan,d:'Ваш клан',ic:'fa-shield-halved',cl:'var(--accent)'};
+    o.innerHTML=`<div class="g-card text-center"><div class="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center text-2xl" style="background:${cl.cl}22;color:${cl.cl}"><i class="fas ${cl.ic}"></i></div><div class="russo text-xl" style="color:${cl.cl}">${cl.n}</div></div>
+    <div class="g-card"><div class="font-bold mb-2" style="color:var(--accent)"><i class="fas fa-comments mr-1"></i>Чат</div><div id="chat-box" style="max-height:200px;overflow-y:auto;margin-bottom:8px">${rChat()}</div><div class="flex gap-2"><input id="chat-in" type="text" placeholder="Сообщение..." class="flex-1 px-3 py-2 rounded-lg text-sm" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none" onkeydown="if(event.key==='Enter')sendChat()"><button class="g-btn g-btn-primary" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button></div></div>
+    <button class="g-btn g-btn-danger w-full mt-2" onclick="leaveClan()"><i class="fas fa-right-from-bracket"></i> Покинуть</button>`
+  }else{
+    o.innerHTML=`<div class="text-center mb-6" style="color:var(--muted)"><i class="fas fa-shield-halved text-4xl mb-3" style="color:var(--accent)"></i><div>Вы не в клане</div></div><button class="g-btn g-btn-primary w-full mb-4" onclick="createClanUI()"><i class="fas fa-plus"></i> Создать (5000)</button>${CLANS.map(c=>`<div class="g-card flex items-center gap-3"><div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl" style="background:${c.cl}22;color:${c.cl}"><i class="fas ${c.ic}"></i></div><div class="flex-1"><div class="font-bold" style="color:${c.cl}">${c.n}</div><div class="text-xs" style="color:var(--muted)">${c.d}</div></div><button class="g-btn ${G.lvl>=c.rq?'g-btn-success':'g-btn-secondary'}" onclick="joinClan('${c.id}')" ${G.lvl>=c.rq?'':'disabled'}>${G.lvl>=c.rq?'Вступить':'Ур.'+c.rq}</button></div>`).join('')}`
+  }
+}
+function rChat(){if(!G.chat.length)return'<div class="text-center text-sm py-4" style="color:var(--muted)">Пусто</div>';return G.chat.slice(-20).map(m=>`<div class="py-1 text-sm"><span class="font-bold" style="color:var(--accent)">${m.a}</span>: ${m.t}</div>`).join('')}
+function sendChat(){let i=document.getElementById('chat-in'),t=i.value.trim();if(!t)return;G.chat.push({a:G.name,t});setTimeout(()=>{let r=['Отлично!','Го фармить!','Сила!'],n=['Страж','Рыцарь'];G.chat.push({a:n[Math.floor(Math.random()*n.length)],t:r[Math.floor(Math.random()*r.length)]});let b=document.getElementById('chat-box');if(b){b.innerHTML=rChat();b.scrollTop=b.scrollHeight}save()},2000);i.value='';let b=document.getElementById('chat-box');if(b){b.innerHTML=rChat();b.scrollTop=b.scrollHeight}save()}
+function joinClan(id){G.clan=id;G.chat=[];toast('Вступили!','success');qProg('clan',1);renderClan();save()}
+function leaveClan(){G.clan=null;G.chat=[];toast('Вышли','info');renderClan();save()}
+function createClanUI(){if(G.coins<5000)return toast('Нужно 5000!','error');modal(`<h3 class="russo text-xl mb-4" style="color:var(--accent)">Создать клан</h3><input id="cn-in" type="text" maxlength="20" placeholder="Название..." class="w-full px-3 py-2 rounded-lg mb-4" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none"><button class="g-btn g-btn-primary w-full" onclick="doCreateClan()">Создать</button>`)}
+function doCreateClan(){let n=document.getElementById('cn-in')?.value?.trim();if(!n)return toast('Введите название!','error');G.coins-=5000;G.clan=n;G.chat=[];CLANS.push({id:n,n,d:'Пользовательский',ic:'fa-shield-halved',cl:'var(--accent)',rq:1});closeM();toast('Клан "'+n+'" создан!','success');qProg('clan',1);renderClan();ui()}
+
+// Друзья
+let cSoc='friends';
+function socTab(t){cSoc=t;document.querySelectorAll('.ftab').forEach(b=>{b.classList.toggle('g-btn-primary',b.dataset.t===t);b.classList.toggle('g-btn-secondary',b.dataset.t!==t)});renderSoc()}
+
+function encP(){try{let d=JSON.stringify({i:G.pid,n:G.name,l:G.lvl,c:G.tCoins,fc:G.friendCode});return btoa(unescape(encodeURIComponent(d)))}catch(e){return''}}
+function decP(s){try{return JSON.parse(decodeURIComponent(escape(atob(s))))}catch(e){return null}}
+function invLink(){let base=window.location.href.split('?')[0].split('#')[0];let enc=encP();if(!enc)return'';return base+'?f='+enc}
+function chkFR(){try{let p=new URLSearchParams(window.location.search),fd=p.get('f');if(!fd)return;let pr=decP(fd);if(!pr||!pr.i||pr.i===G.pid)return;if(G.friends.find(f=>f.id===pr.i)){toast(pr.n+' уже друг!','info');return}showFR(pr)}catch(e){}}
+
+function showFR(pr){
+  _pendingFR=pr;
+  document.getElementById('freq-area').innerHTML=`<div class="friend-banner"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold" style="background:rgba(0,0,0,.2);color:#000">${pr.n[0]}</div><div><div class="font-bold text-lg">${pr.n}</div><div class="text-sm opacity-80">Ур.${pr.l} хочет стать другом!</div></div></div><div class="flex gap-2 mt-3"><button class="g-btn g-btn-primary flex-1" onclick="acceptFR()"><i class="fas fa-check"></i> Принять</button><button class="g-btn g-btn-danger" onclick="declineFR()"><i class="fas fa-xmark"></i></button></div></div>`;
+  socTab('friends');go('scr-social',document.querySelector('[data-scr="scr-social"]'));
+}
+function acceptFR(){if(!_pendingFR)return;let pr=_pendingFR;if(!G.friends.find(f=>f.id===pr.i))G.friends.push({id:pr.i,name:pr.n,level:pr.l,coins:pr.c,online:true,fc:pr.fc||''});toast(pr.n+' друг!','success');_pendingFR=null;document.getElementById('freq-area').innerHTML='';let u=new URL(location);u.searchParams.delete('f');history.replaceState({},'',u);renderSoc();save()}
+function declineFR(){_pendingFR=null;document.getElementById('freq-area').innerHTML='';let u=new URL(location);u.searchParams.delete('f');history.replaceState({},'',u)}
+
+// Модалка добавления друга (Код + Ссылка + QR)
+function showInvM(){
+  let lk=invLink();if(!lk)lk='Ошибка генерации ссылки';
+  modal(`
+    <h3 class="russo text-xl mb-4" style="color:var(--accent)"><i class="fas fa-user-plus mr-2"></i>Добавить друга</h3>
+    
+    <div class="g-card" style="border-color:var(--info); margin-bottom:16px">
+      <div class="text-xs font-bold mb-1" style="color:var(--muted)">Ваш код дружбы:</div>
+      <div class="flex items-center gap-2"><span class="russo text-lg" style="color:var(--info)">${G.friendCode}</span><button class="g-btn g-btn-info text-xs" onclick="copyFC('${G.friendCode}')"><i class="fas fa-copy"></i></button></div>
+      <div class="text-xs mt-1" style="color:var(--muted)">Отправьте его другу!</div>
+    </div>
+
+    <div class="mb-4">
+      <div class="text-xs font-bold mb-1" style="color:var(--muted)">Добавить по коду:</div>
+      <div class="flex gap-2">
+        <input id="fc-input" type="text" maxlength="13" placeholder="F-XXXX-YYYY" class="flex-1 px-3 py-2 rounded-lg" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none;text-transform:uppercase">
+        <button class="g-btn g-btn-success" onclick="addByFC()"><i class="fas fa-user-plus"></i></button>
+      </div>
+    </div>
+
+    <hr style="border-color:var(--border); margin: 16px 0;">
+
+    <div class="text-xs font-bold mb-2" style="color:var(--muted)">Или поделитесь ссылкой / QR-кодом:</div>
+    <div class="mb-3"><div class="link-box" id="inv-link-txt">${lk}</div></div>
+    <button class="g-btn g-btn-primary w-full mb-4" onclick="copyLink()"><i class="fas fa-copy mr-1"></i> Скопировать ссылку</button>
+    <div class="text-center mb-2"><span class="text-xs font-bold" style="color:var(--muted)">QR-код:</span></div>
+    <div class="flex justify-center mb-4"><div id="qr-c" style="background:#fff;padding:12px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div></div>
+    <button class="g-btn g-btn-secondary w-full" onclick="closeM()">Закрыть</button>
+  `);
+  
+  setTimeout(()=>{
+    try{if(typeof QRCode!=='undefined'&&lk.length>5){new QRCode(document.getElementById('qr-c'),{text:lk,width:160,height:160,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.L})}else{document.getElementById('qr-c').innerHTML='<div style="color:#000;padding:20px;text-align:center;font-size:12px">QR недоступен</div>'}}catch(e){document.getElementById('qr-c').innerHTML='<div style="color:#000;padding:20px">Ошибка</div>'}
+  },150);
+}
+
+function addByFC(){
+  let inputEl=document.getElementById('fc-input');if(!inputEl)return;
+  let code=inputEl.value.trim().toUpperCase();
+  if(!code)return toast('Введите код!','error');
+  if(code===G.friendCode)return toast('Это ваш собственный код!','error');
+  if(G.friends.find(f=>(f.fc||'').toUpperCase()===code))return toast('Этот друг уже добавлен!','error');
+
+  // Проверка на ботов
+  let bot=BOTS.find(b=>b.fc===code);
+  if(bot){
+    G.friends.push({id:bot.id,name:bot.n,level:bot.l,coins:0,online:true,fc:bot.fc});
+    toast(bot.n+' добавлен по коду!','success');
+    inputEl.value='';closeM();renderSoc();save();return;
+  }
+
+  // Если код неизвестен — создаём "Странника" (симуляция реального игрока в локальной игре)
+  let travelerId='t_'+Date.now();
+  let travelerName='Странник_'+code.substr(code.length-4);
+  let travelerLvl=Math.floor(Math.random()*20)+1;
+  G.friends.push({id:travelerId,name:travelerName,level:travelerLvl,coins:0,online:true,fc:code});
+  toast(travelerName+' добавлен!','success');
+  inputEl.value='';closeM();renderSoc();save();
+}
+
+function copyLink(){let lk=invLink();if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(lk).then(()=>toast('Ссылка скопирована!','success')).catch(()=>{fallbackCopy(lk);toast('Ссылка скопирована!','success')})}else{fallbackCopy(lk);toast('Ссылка скопирована!','success')}}
+
+function showTrade(fid){
+  _tradeFriend=G.friends.find(f=>f.id===fid);if(!_tradeFriend)return;
+  let opts=G.inv.filter(i=>i.q>0).map(iv=>{let it=ITEMS.find(x=>x.id===iv.id);return it?`<option value="${it.id}">${it.n} (x${iv.q})</option>`:''}).join('');
+  modal(`<h3 class="russo text-xl mb-4" style="color:var(--accent)"><i class="fas fa-right-left mr-2"></i>Обмен с ${_tradeFriend.name}</h3>
+  <div class="mb-4"><div class="font-bold text-sm mb-2" style="color:var(--muted)">Отправить предмет:</div>${opts?`<select id="tr-sel" class="w-full px-3 py-2 rounded-lg mb-2" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none">${opts}</select><button class="g-btn g-btn-purple w-full" onclick="sendItem()"><i class="fas fa-paper-plane"></i> Отправить</button>`:'<div class="text-sm" style="color:var(--muted)">Нет предметов</div>'}</div>
+  <div class="mb-4"><div class="font-bold text-sm mb-2" style="color:var(--muted)">Отправить золото:</div><div class="flex gap-2"><input id="tr-gold" type="number" min="100" value="500" class="flex-1 px-3 py-2 rounded-lg" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none"><button class="g-btn g-btn-primary" onclick="sendGold()"><i class="fas fa-coins"></i></button></div></div>
+  <button class="g-btn g-btn-secondary w-full" onclick="closeM()">Закрыть</button>`)
+}
+function sendItem(){let sel=document.getElementById('tr-sel');if(!sel)return;let id=sel.value,it=ITEMS.find(x=>x.id===id);if(!it||!invRem(id))return toast('Ошибка!','error');toast(it.n+' отправлен!','success');setTimeout(()=>{if(Math.random()>.5&&_tradeFriend){let ri=ITEMS[Math.floor(Math.random()*3)];invAdd(ri.id);toast(_tradeFriend.name+' прислал '+ri.n+'!','gold');if(curScr==='scr-shop')renderShop()}},3000);closeM();save()}
+function sendGold(){let amt=parseInt(document.getElementById('tr-gold')?.value)||0;if(amt<100)return toast('Мин 100!','error');if(G.coins<amt)return toast('Мало золота!','error');G.coins-=amt;toast(f(amt)+' отправлено!','success');setTimeout(()=>{if(Math.random()>.4){let b=Math.floor(amt*(0.5+Math.random()));G.coins+=b;G.tCoins+=b;toast('Вам вернули '+f(b)+'!','gold');ui()}},5000);closeM();ui();save()}
+function remFR(id){G.friends=G.friends.filter(f=>f.id!==id);toast('Удалён','info');renderSoc();save()}
+
+function renderSoc(){
+  let o=document.getElementById('soc-out');
+  if(cSoc==='friends'){
+    let fh=G.friends.length?G.friends.map(f=>`<div class="g-card flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold" style="background:var(--accent)22;color:var(--accent)">${f.name[0]}</div><div class="flex-1"><div class="font-bold text-sm">${f.name}</div><div class="text-xs" style="color:var(--muted)">Ур.${f.level} ${f.fc?'· Код: '+f.fc:''}</div></div><div class="flex gap-1"><button class="g-btn g-btn-purple text-xs" onclick="showTrade('${f.id}')"><i class="fas fa-right-left"></i></button><button class="g-btn g-btn-secondary text-xs" onclick="remFR('${f.id}')"><i class="fas fa-user-minus"></i></button></div></div>`).join(''):'<div class="text-sm mb-4" style="color:var(--muted)">Нет друзей</div>';
+    o.innerHTML=`<button class="g-btn g-btn-info w-full mb-4" onclick="showInvM()"><i class="fas fa-qrcode mr-1"></i> Добавить друга</button>${fh}<h3 class="russo text-lg mb-3 mt-4">Найти (введите их коды в окне выше)</h3>${BOTS.map(b=>`<div class="g-card flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center font-bold" style="background:var(--card2);color:var(--muted)">${b.n[0]}</div><div class="flex-1"><div class="font-bold text-sm">${b.n}</div><div class="text-xs" style="color:var(--info)">${b.fc}</div></div></div>`).join('')}`
+  }else{
+    let lb=[{n:'Дракон777',l:30,c:3500000},{n:'ТёмныйРыцарь',l:22,c:1200000},{n:G.name+' (Вы)',l:G.lvl,c:G.tCoins,me:1}];
+    lb.sort((a,b)=>b.c-a.c);
+    o.innerHTML=`<div class="g-card">${lb.map((p,i)=>`<div class="flex items-center gap-3 py-2 ${i<lb.length-1?'border-b':''}" style="border-color:var(--border);${p.me?'background:var(--accent)11;border-radius:12px;padding:10px':''}"><div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background:${i<3?['linear-gradient(135deg,#ffd700,#ff8c00)','linear-gradient(135deg,#c0c0c0,#8a8a8a)','linear-gradient(135deg,#cd7f32,#8b4513)'][i]:'var(--card2)'};color:${i<3?'#000':'var(--muted)'}">${i+1}</div><div class="flex-1"><div class="font-bold text-sm" style="${p.me?'color:var(--accent)':''}">${p.n}</div></div><div class="text-sm font-bold" style="color:var(--gold)">${f(p.c)}</div></div>`).join('')}</div>`
+  }
+}
+function addBot(id){let b=BOTS.find(x=>x.id===id);if(!b)return;if(G.friends.find(f=>f.id===id))return toast('Уже друг!','info');G.friends.push({id:b.id,name:b.n,level:b.l,coins:0,online:true,fc:b.fc});toast(b.n+' друг!','success');renderSoc();save()}
+
+function claimDaily(){let now=Date.now();if(G.dailyT&&now-G.dailyT<86400000)return toast('Уже получен!','error');let b=Math.floor(500*G.lvl);G.coins+=b;G.tCoins+=b;G.dailyT=now;toast('Бонус: +'+f(b),'gold');ui();save()}
+
+let uiTimer=null;
+function ui(){if(uiTimer)return;uiTimer=setTimeout(()=>{uiTimer=null;doUI()},50)}
+function doUI(){
+  document.getElementById('hd-coins').textContent=f(G.coins);
+  document.getElementById('hd-name').textContent=G.name;
+  document.getElementById('main-coins').textContent=f(G.coins);
+  document.getElementById('main-pow').textContent=f(G.pow);
+  document.getElementById('main-lvl').textContent=G.lvl;
+  document.getElementById('exp-bar').style.width=(G.xp/G.xpN*100)+'%';
+  document.getElementById('exp-cur').textContent=f(G.xp);
+  document.getElementById('exp-need').textContent=f(G.xpN);
+  let aw=document.getElementById('hd-auto');if(G.auto>0){aw.style.display='flex';document.getElementById('hd-auto-val').textContent=f(G.auto)+'/с'}else aw.style.display='none';
+  let dt=document.getElementById('daily-timer'),db=document.getElementById('daily-btn');
+  if(G.dailyT&&Date.now()-G.dailyT<86400000){let r=86400000-(Date.now()-G.dailyT);dt.textContent=`Через ${Math.floor(r/3600000)}ч`;db.disabled=true}else{dt.textContent='Доступен!';db.disabled=false}
+  updBadge()
+}
+
+setInterval(()=>{if(G.auto>0){let g=G.auto/10;G.coins+=g;G.tCoins+=g;G.xp+=Math.max(.1,g/50);lvlUp();ui()}},100);
+
+const cvs=document.getElementById('bg-canvas'),ctx=cvs.getContext('2d');let pts=[];
+function rsz(){cvs.width=innerWidth;cvs.height=innerHeight}rsz();addEventListener('resize',rsz);
+for(let i=0;i<35;i++)pts.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*2+.5,vx:(Math.random()-.5)*.3,vy:-(Math.random()*.3+.1),a:Math.random()*.3+.1});
+function drawBg(){ctx.clearRect(0,0,cvs.width,cvs.height);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.y<-10){p.y=cvs.height+10;p.x=Math.random()*cvs.width}ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(245,166,35,${p.a})`;ctx.fill()});requestAnimationFrame(drawBg)}drawBg();
+
+setInterval(()=>{ACH.forEach(a=>{G.qp['a_'+a.id]=getAV(a.t)});getDQ().forEach(q=>{if(q.done)return;let v=0;if(q.t==='clicks')v=G.tClicks;if(q.t==='earn')v=G.tCoins;if(q.t==='buy')v=G.tBuys;if(q.t==='sell')v=G.sold;if(q.t==='level')v=G.lvl;G.qp[q.qid]=Math.min(q.tg,v)});updBadge()},2000);
+document.getElementById('click-zone').addEventListener('click',()=>{qProg('clicks',1);qProg('earn',G.pow)});
+setInterval(save,5000);addEventListener('beforeunload',save);
+setInterval(updPrice,3000);
+
+// Случайные подарки от друзей
+setInterval(()=>{if(G.friends.length&&Math.random()<.1){let fr=G.friends[Math.floor(Math.random()*G.friends.length)];let b=Math.floor(100+Math.random()*500);G.coins+=b;G.tCoins+=b;toast(fr.name+' прислал '+f(b)+'!','gold');ui();save()}},30000);
+
+// Случайные добавления в друзья по вашему коду (симуляция)
+setInterval(()=>{
+  if(G.friends.length<15&&Math.random()<0.04){
+    let travelerId='t_'+Date.now();
+    let travelerName='Странник_'+Math.random().toString(36).substr(2,4).toUpperCase();
+    let travelerLvl=Math.floor(Math.random()*15)+5;
+    G.friends.push({id:travelerId,name:travelerName,level:travelerLvl,coins:0,online:true,fc:'F-'+Math.random().toString(36).substr(2,4).toUpperCase()+'-'+Math.random().toString(36).substr(2,4).toUpperCase()});
+    toast(travelerName+' добавил вас по коду!','info');
+    if(curScr==='scr-social')renderSoc();save();
+  }
+},45000);
+
+setInterval(()=>{if(G.staked>0){let gain=Math.floor(G.staked*G.tknPrice*0.1/3600*10);if(gain>0){G.coins+=gain;G.tCoins+=gain;ui()}}},100);
+
+load();ui();chkFR();
+if(G.tClicks===0&&G.name==='Игрок'){
+  modal(`<h3 class="russo text-xl mb-4" style="color:var(--accent)">Добро пожаловать!</h3><p class="text-sm mb-4" style="color:var(--muted)">Введите имя:</p><input id="init-nm" type="text" maxlength="16" placeholder="Имя..." class="w-full px-3 py-2 rounded-lg mb-4" style="background:var(--card2);border:1px solid var(--border);color:var(--fg);outline:none" autofocus><button class="g-btn g-btn-primary w-full" onclick="G.name=document.getElementById('init-nm').value.trim()||'Игрок';closeM();ui();save()"><i class="fas fa-play"></i> Начать!</button>`);
+  setTimeout(()=>document.getElementById('init-nm')?.focus(),100)
+}
+</script>
+</body>
+</html>
