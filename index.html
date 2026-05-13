@@ -1,0 +1,3030 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TapGold - Кликер</title>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Библиотека для QR-кодов -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0a;
+  --card: #151515;
+  --card2: #1f1f1f;
+  --border: #2a2a2a;
+  --fg: #f0e6d2;
+  --muted: #776e5f;
+  --accent: #f5a623;
+  --accent2: #ff6b35;
+  --gold: #ffd700;
+  --success: #4caf50;
+  --danger: #e74c3c;
+  --info: #2196f3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Nunito', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .russo { font-family: 'Russo One', sans-serif; }
+
+/* Canvas Background */
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Screens */
+.screen {
+  display: none;
+  padding: 16px 16px 90px;
+  z-index: 1;
+  position: relative;
+}
+.screen.active {
+  display: block;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+/* Navigation */
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.nav-btn i { font-size: 18px; transition: all 0.15s; }
+.nav-btn.active { color: var(--accent); }
+.nav-btn.active i { transform: scale(1.1); }
+.nav-btn:hover { color: var(--accent); }
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 45%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 8px;
+}
+
+/* Coin Zone */
+.coin-zone {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coin {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe082, #f5a623 50%, #c77800);
+  box-shadow: 0 0 35px rgba(245, 166, 35, 0.35), inset 0 -3px 10px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46px;
+  color: #5a3e00;
+  transition: transform 0.07s;
+  z-index: 2;
+  position: relative;
+}
+.coin:active { transform: scale(0.91); }
+.coin::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 18%;
+  width: 28%;
+  height: 18%;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+}
+
+.coin-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2.5px solid var(--accent);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+  opacity: 0.35;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.06); opacity: 0.5; }
+}
+
+/* Floating Numbers */
+.float-num {
+  position: absolute;
+  pointer-events: none;
+  font-family: 'Russo One', sans-serif;
+  font-size: 22px;
+  color: var(--gold);
+  z-index: 10;
+  animation: floatUp 0.8s forwards;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+}
+.float-num.crit {
+  font-size: 32px;
+  color: var(--accent2);
+  animation: critFloat 0.8s forwards;
+}
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-80px) scale(1.2); }
+}
+
+@keyframes critFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1.1); }
+  50% { transform: translateY(-40px) scale(1.6); }
+  100% { opacity: 0; transform: translateY(-100px) scale(1); }
+}
+
+.burst {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 166, 35, 0.2), transparent 70%);
+  animation: burstAnim 0.35s forwards;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes burstAnim {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Progress Bar */
+.progress-bar {
+  height: 7px;
+  background: var(--card2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.35s;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:active { transform: scale(0.94); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000;
+}
+.btn-primary:hover { box-shadow: 0 0 15px rgba(245, 166, 35, 0.3); }
+.btn-secondary {
+  background: var(--card2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { border-color: var(--accent); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-info { background: var(--info); color: #fff; }
+.btn-purple { background: #9c27b0; color: #fff; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+
+/* Pill Button */
+.pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pill-btn:hover { border-color: var(--accent); }
+
+/* Toast Container */
+#toastContainer {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.toast {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  animation: toastIn 0.25s ease-out, toastOut 0.25s ease-in 2.4s forwards;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(-15px); }
+}
+
+.toast-gold { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #000; }
+.toast-success { background: var(--success); color: #fff; }
+.toast-error { background: var(--danger); color: #fff; }
+.toast-info { background: var(--info); color: #fff; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.modal-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 380px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Rarity Colors */
+.rarity-common { color: #4caf50; }
+.rarity-rare { color: #2196f3; }
+.rarity-epic { color: #9c27b0; }
+.rarity-legendary { color: #ff6b35; }
+
+.bg-common { background: rgba(76, 175, 80, 0.12); }
+.bg-rare { background: rgba(33, 150, 243, 0.12); }
+.bg-epic { background: rgba(156, 39, 176, 0.12); }
+.bg-legendary { background: rgba(255, 107, 53, 0.12); }
+
+.border-common { border-color: #4caf50; }
+.border-rare { border-color: #2196f3; }
+.border-epic { border-color: #9c27b0; }
+.border-legendary { border-color: #ff6b35; }
+
+.item-card {
+  border-width: 2px;
+  transition: all 0.15s;
+}
+.item-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Level Up Flash */
+.level-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.25), transparent 70%);
+  animation: levelFlash 0.7s forwards;
+}
+
+@keyframes levelFlash {
+  to { opacity: 0; }
+}
+
+/* Link Box */
+.link-box {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  word-break: break-all;
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.link-box:hover {
+  border-color: var(--accent);
+  background: rgba(245, 166, 35, 0.05);
+}
+
+/* Status Dot */
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: statusPulse 1s infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Crypto Chart */
+.chart-wrapper {
+  position: relative;
+  height: 160px;
+  background: var(--card2);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.chart-wrapper canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.crypto-up { color: #00c853; }
+.crypto-down { color: #ff1744; }
+
+.token-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #ff1744);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #000;
+  font-size: 16px;
+}
+
+.trade-tabs {
+  display: flex;
+  background: var(--card2);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.trade-tabs button {
+  flex: 1;
+  padding: 9px;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+.trade-tabs button.active-buy {
+  background: var(--success);
+  color: #000;
+}
+.trade-tabs button.active-sell {
+  background: var(--danger);
+  color: #fff;
+}
+
+.wallet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(0, 200, 83, 0.12);
+  color: #00c853;
+}
+
+/* Auth Buttons */
+.auth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.auth-btn:hover { box-shadow: 0 0 12px rgba(0, 0, 0, 0.4); }
+.auth-google { background: #fff; color: #333; }
+.auth-email { background: var(--card2); color: var(--fg); }
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--success);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Input Styles */
+input[type="text"], input[type="number"], input[type="email"], input[type="password"], select {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  outline: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: 'Nunito', sans-serif;
+  width: 100%;
+}
+input:focus, select:focus { border-color: var(--accent); }
+
+/* ==================== QR CODE STYLES ==================== */
+.qr-container {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+  padding: 15px;
+  background: #fff;
+  border-radius: 12px;
+  text-align: center;
+}
+.qr-container #qrCodeCanvas {
+  display: inline-block !important;
+}
+.qr-instructions {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* Friend Code Display */
+.friend-code-display {
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.1), rgba(255, 107, 53, 0.1));
+  border: 2px dashed var(--accent);
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+  margin: 10px 0;
+}
+.friend-code-display .code-text {
+  font-family: 'Russo One', monospace;
+  font-size: 20px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin: 8px 0;
+}
+.friend-code-display .code-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Share Buttons */
+.share-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+}
+.share-btn:active { transform: scale(0.95); }
+.share-telegram { background: #0088cc; color: #fff; }
+.share-whatsapp { background: #25D366; color: #fff; }
+.share-copy { background: var(--card2); color: var(--fg); border: 1px solid var(--border); }
+.share-qrcode { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #000; }
+
+/* Scan Animation */
+.scan-animation {
+  position: relative;
+  overflow: hidden;
+}
+.scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scanMove 2s ease-in-out infinite;
+}
+@keyframes scanMove {
+  0%, 100% { top: 0; }
+  50% { top: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Background Canvas -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
+<!-- Header -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-3 py-1.5" style="background: linear-gradient(180deg, var(--bg) 50%, transparent);">
+  <div class="pill-btn" onclick="navigate('main')">
+    <i class="fas fa-coins" style="color: var(--gold)"></i>
+    <span id="headerCoins">0</span>
+  </div>
+  <div class="pill-btn" onclick="showProfile()">
+    <i class="fas fa-user" style="color: var(--accent)"></i>
+    <span id="headerName">Игрок</span>
+  </div>
+  <div class="pill-btn" id="autoDisplay" style="display: none;">
+    <span class="status-dot"></span>
+    <span id="autoRate">0/с</span>
+  </div>
+</header>
+
+<main class="pt-12">
+
+  <!-- MAIN SCREEN -->
+  <section class="screen active" id="mainScreen">
+    <div class="text-center mb-3">
+      <div class="text-xs font-bold" style="color: var(--muted)">Ваше золото</div>
+      <div class="russo text-3xl mt-1" style="color: var(--gold)" id="mainCoins">0</div>
+      <div class="text-xs mt-1" style="color: var(--muted)">
+        Сила: <span id="powerDisplay" style="color: var(--accent)">1</span> · 
+        Ур. <span id="levelDisplay">1</span>
+      </div>
+    </div>
+
+    <!-- Coin Clicker -->
+    <div class="coin-zone" id="coinZone">
+      <div class="coin-ring"></div>
+      <div class="coin">$</div>
+    </div>
+
+    <!-- XP Bar -->
+    <div class="text-center mt-3">
+      <div class="progress-bar mx-auto" style="max-width: 240px;">
+        <div class="progress-fill" id="xpBar" style="width: 0%"></div>
+      </div>
+      <div class="text-xs mt-1" style="color: var(--muted)">
+        <span id="xpCurrent">0</span> / <span id="xpNeeded">100</span> XP
+      </div>
+    </div>
+
+    <!-- Daily Bonus -->
+    <div class="card mt-5 text-center">
+      <div class="font-bold mb-1 text-sm" style="color: var(--accent)">
+        <i class="fas fa-gift mr-1"></i>Ежедневный бонус
+      </div>
+      <button class="btn btn-primary" id="dailyBtn" onclick="claimDailyBonus()">
+        <i class="fas fa-hand-sparkles"></i> Забрать
+      </button>
+      <div class="text-xs mt-1" style="color: var(--muted)" id="dailyTimer"></div>
+    </div>
+  </section>
+
+  <!-- SHOP SCREEN -->
+  <section class="screen" id="shopScreen">
+    <h2 class="russo text-xl mb-3" style="color: var(--accent)">
+      <i class="fas fa-store mr-1"></i>Магазин
+    </h2>
+    
+    <div class="flex gap-2 mb-3 flex-wrap">
+      <button class="btn btn-primary shop-tab active" data-tab="upgrades" onclick="switchShopTab('upgrades')">Улучшения</button>
+      <button class="btn btn-secondary shop-tab" data-tab="market" onclick="switchShopTab('market')">Рынок</button>
+      <button class="btn btn-secondary shop-tab" data-tab="inventory" onclick="switchShopTab('inventory')">Инвентарь</button>
+    </div>
+    
+    <div id="shopContent"></div>
+  </section>
+
+  <!-- CRYPTO SCREEN -->
+  <section class="screen" id="cryptoScreen">
+    <h2 class="russo text-xl mb-3" style="color: var(--accent)">
+      <i class="fas fa-chart-line mr-1"></i>Крипто Биржа
+    </h2>
+    <div id="cryptoContent"></div>
+  </section>
+
+  <!-- QUESTS SCREEN -->
+  <section class="screen" id="questsScreen">
+    <h2 class="russo text-xl mb-3" style="color: var(--accent)">
+      <i class="fas fa-scroll mr-1"></i>Задания
+    </h2>
+    
+    <div class="flex gap-2 mb-3">
+      <button class="btn btn-primary quest-tab active" data-tab="daily" onclick="switchQuestTab('daily')">Ежедневные</button>
+      <button class="btn btn-secondary quest-tab" data-tab="achievements" onclick="switchQuestTab('achievements')">Достижения</button>
+    </div>
+    
+    <div id="questContent"></div>
+  </section>
+
+  <!-- CLAN SCREEN -->
+  <section class="screen" id="clanScreen">
+    <h2 class="russo text-xl mb-3" style="color: var(--accent)">
+      <i class="fas fa-shield-halved mr-1"></i>Клан
+    </h2>
+    <div id="clanContent"></div>
+  </section>
+
+  <!-- SOCIAL SCREEN -->
+  <section class="screen" id="socialScreen">
+    <h2 class="russo text-xl mb-3" style="color: var(--accent)">
+      <i class="fas fa-users mr-1"></i>Друзья
+    </h2>
+    
+    <div id="friendRequestArea"></div>
+    
+    <div class="flex gap-2 mb-3">
+      <button class="btn btn-primary social-tab active" data-tab="friends" onclick="switchSocialTab('friends')">Друзья</button>
+      <button class="btn btn-secondary social-tab" data-tab="leaderboard" onclick="switchSocialTab('leaderboard')">Рейтинг</button>
+    </div>
+    
+    <div id="socialContent"></div>
+  </section>
+
+</main>
+
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex justify-around py-1.5" style="background: linear-gradient(0deg, var(--bg) 75%, transparent); border-top: 1px solid var(--border);">
+  <button class="nav-btn active" onclick="navigate('main')" data-screen="main">
+    <i class="fas fa-coins"></i><span>Клик</span>
+  </button>
+  <button class="nav-btn" onclick="navigate('shop')" data-screen="shop">
+    <i class="fas fa-store"></i><span>Магазин</span>
+  </button>
+  <button class="nav-btn" onclick="navigate('crypto')" data-screen="crypto">
+    <i class="fas fa-chart-line"></i><span>Биржа</span>
+  </button>
+  <button class="nav-btn" onclick="navigate('quests')" data-screen="quests">
+    <i class="fas fa-scroll"></i><span>Задания</span>
+    <span class="badge" id="questBadge" style="display: none;">0</span>
+  </button>
+  <button class="nav-btn" onclick="navigate('clan')" data-screen="clan">
+    <i class="fas fa-shield-halved"></i><span>Клан</span>
+  </button>
+  <button class="nav-btn" onclick="navigate('social')" data-screen="social">
+    <i class="fas fa-users"></i><span>Рейтинг</span>
+  </button>
+</nav>
+
+<script>
+// ==================== GAME DATA ====================
+const STORAGE_KEY = 'TapGold_v13';
+
+const UPGRADES = [
+  { id: 'c1', name: 'Палец +1', desc: '+1 сила', icon: 'fa-hand-pointer', baseCost: 50, costMult: 1.5, effect: 'power', value: 1, maxLevel: 50 },
+  { id: 'a1', name: 'Рудник', desc: '+1/с', icon: 'fa-mountain', baseCost: 200, costMult: 1.6, effect: 'auto', value: 1, maxLevel: 30 },
+  { id: 'c5', name: 'Алхимия', desc: '+5 сила', icon: 'fa-flask', baseCost: 2000, costMult: 1.8, effect: 'power', value: 5, maxLevel: 20 },
+  { id: 'a5', name: 'Печать', desc: '+5/с', icon: 'fa-stamp', baseCost: 10000, costMult: 2, effect: 'auto', value: 5, maxLevel: 15 },
+  { id: 'cr', name: 'Глаз', desc: '+5% крит', icon: 'fa-eye', baseCost: 5000, costMult: 2.2, effect: 'crit', value: 5, maxLevel: 15 },
+  { id: 'cm', name: 'Мощь', desc: 'x0.5 крит урон', icon: 'fa-bolt', baseCost: 8000, costMult: 2.5, effect: 'critMult', value: 0.5, maxLevel: 10 },
+  { id: 'c25', name: 'Дракон', desc: '+25 сила', icon: 'fa-dragon', baseCost: 100000, costMult: 2, effect: 'power', value: 25, maxLevel: 10 },
+  { id: 'a25', name: 'Империя', desc: '+25/с', icon: 'fa-crown', baseCost: 250000, costMult: 2.5, effect: 'auto', value: 25, maxLevel: 8 }
+];
+
+const ITEMS = [
+  { id: 'ore', name: 'Руда', icon: 'fa-cube', rarity: 1, basePrice: 200, desc: 'Ресурс' },
+  { id: 'herb', name: 'Трава', icon: 'fa-leaf', rarity: 1, basePrice: 350, desc: 'Ингредиент' },
+  { id: 'crys', name: 'Кристалл', icon: 'fa-diamond', rarity: 2, basePrice: 1500, desc: 'Минерал' },
+  { id: 'scr', name: 'Свиток', icon: 'fa-scroll', rarity: 2, basePrice: 2500, desc: 'Знания' },
+  { id: 'gem', name: 'Изумруд', icon: 'fa-gem', rarity: 3, basePrice: 12000, desc: 'Магия' },
+  { id: 'fth', name: 'Перо', icon: 'fa-feather-pointed', rarity: 3, basePrice: 25000, desc: 'Пламя' },
+  { id: 'hrt', name: 'Сердце', icon: 'fa-heart', rarity: 4, basePrice: 100000, desc: 'Сила' },
+  { id: 'crw', name: 'Корона', icon: 'fa-crown', rarity: 4, basePrice: 250000, desc: 'Артефакт' }
+];
+
+const RARITY_NAMES = { 1: 'Обычный', 2: 'Редкий', 3: 'Эпический', 4: 'Легенда' };
+const RARITY_CLASSES = { 1: 'common', 2: 'rare', 3: 'epic', 4: 'legendary' };
+
+const DAILY_QUESTS = [
+  { id: 'd1', descTemplate: 'Кликни {n} раз', type: 'clicks', target: 100, reward: 500, icon: 'fa-hand-pointer' },
+  { id: 'd2', descTemplate: 'Заработай {n} золота', type: 'earn', target: 1000, reward: 800, icon: 'fa-coins' },
+  { id: 'd3', descTemplate: 'Купи {n} улучшений', type: 'buy', target: 3, reward: 600, icon: 'fa-cart-shopping' },
+  { id: 'd4', descTemplate: 'Продай {n} предмет', type: 'sell', target: 1, reward: 1000, icon: 'fa-store' },
+  { id: 'd5', descTemplate: 'Достигни уровня {n}', type: 'level', target: 5, reward: 1500, icon: 'fa-star' }
+];
+
+const ACHIEVEMENTS = [
+  { id: 'a1', name: 'Первый шаг', desc: 'Сделай 1 клик', type: 'clicks', target: 1, reward: 100, icon: 'fa-shoe-prints' },
+  { id: 'a2', name: 'Начинающий', desc: 'Сделай 100 кликов', type: 'clicks', target: 100, reward: 500, icon: 'fa-hand-pointer' },
+  { id: 'a3', name: 'Опытный', desc: 'Сделай 1000 кликов', type: 'clicks', target: 1000, reward: 2000, icon: 'fa-hand-fist' },
+  { id: 'a4', name: 'Богатей', desc: 'Накопи 100K золота', type: 'total', target: 100000, reward: 5000, icon: 'fa-gem' },
+  { id: 'a5', name: 'Коллекционер', desc: 'Собери 5 предметов', type: 'items', target: 5, reward: 3000, icon: 'fa-box-open' },
+  { id: 'a6', name: 'Торговец', desc: 'Продай 3 предмета', type: 'sold', target: 3, reward: 2000, icon: 'fa-store' },
+  { id: 'a7', name: 'Клановый', desc: 'Вступи в клан', type: 'clan', target: 1, reward: 2000, icon: 'fa-shield-halved' },
+  { id: 'a8', name: 'Уровень 10', desc: 'Достигни 10 уровня', type: 'level', target: 10, reward: 5000, icon: 'fa-star' }
+];
+
+const CLANS = [
+  { id: 'c1', name: 'Тёмные Рыцари', desc: 'Воины', icon: 'fa-chess-knight', color: '#e74c3c', reqLevel: 5 },
+  { id: 'c2', name: 'Золотая Лига', desc: 'Элита', icon: 'fa-coins', color: '#ffd700', reqLevel: 10 },
+  { id: 'c3', name: 'Титаны', desc: 'Легенды', icon: 'fa-mountain-sun', color: '#2196f3', reqLevel: 15 },
+  { id: 'c4', name: 'Алхимики', desc: 'Клики', icon: 'fa-flask-vial', color: '#4caf50', reqLevel: 3 },
+  { id: 'c5', name: 'Орден Дракона', desc: 'Хранители', icon: 'fa-dragon', color: '#ff6b35', reqLevel: 20 }
+];
+
+const BOTS = [
+  { id: 'b1', name: 'ЗолотойМастер', level: 15, friendCode: 'F-GOLD-777' },
+  { id: 'b2', name: 'Кликер2024', level: 8, friendCode: 'F-CLK-2024' },
+  { id: 'b3', name: 'ТёмныйРыцарь', level: 22, friendCode: 'F-DARK-KN1' }
+];
+
+// ==================== GAME STATE ====================
+let game = null;
+let currentScreen = 'main';
+let currentShopTab = 'upgrades';
+let currentQuestTab = 'daily';
+let currentSocialTab = 'friends';
+let pendingFriendRequest = null;
+let selectedFriendForTrade = null;
+let resetConfirm = false;
+
+function createDefaultGame() {
+  return {
+    coins: 0,
+    totalCoins: 0,
+    totalClicks: 0,
+    totalCrits: 0,
+    totalBuys: 0,
+    maxClick: 0,
+    power: 1,
+    autoIncome: 0,
+    critChance: 0,
+    critMultiplier: 2,
+    level: 1,
+    xp: 0,
+    xpNeeded: 100,
+    upgrades: {},
+    questProgress: {},
+    lastDailyTime: 0,
+    clanId: null,
+    clanChat: [],
+    playerName: 'Игрок',
+    playerId: 'p' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+    friends: [],
+    inventory: [],
+    itemsSold: 0,
+    marketDay: 0,
+    marketPrices: {},
+    tokens: 0,
+    tokenPrice: 10,
+    tokenHistory: [10],
+    stakeAmount: 0,
+    hasWallet: false,
+    tradeMode: 'buy',
+    friendCode: '',
+    authEmail: '',
+    authMethod: '',
+    isVerified: false
+  };
+}
+
+function generateFriendCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'F-';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  code += '-';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+// ==================== SAVE / LOAD ====================
+function saveGame() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(game));
+  } catch (e) {
+    console.error('Save error:', e);
+  }
+}
+
+function loadGame() {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      game = { ...createDefaultGame(), ...parsed };
+      
+      // Ensure arrays exist
+      if (!Array.isArray(game.tokenHistory)) game.tokenHistory = [10];
+      if (!Array.isArray(game.inventory)) game.inventory = [];
+      if (!Array.isArray(game.friends)) game.friends = [];
+      if (!Array.isArray(game.clanChat)) game.clanChat = [];
+      
+      // Generate friend code if missing
+      if (!game.friendCode) game.friendCode = generateFriendCode();
+    } else {
+      game = createDefaultGame();
+      game.friendCode = generateFriendCode();
+    }
+  } catch (e) {
+    console.error('Load error:', e);
+    game = createDefaultGame();
+    game.friendCode = generateFriendCode();
+  }
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+function formatNumber(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return Math.floor(n).toLocaleString('ru');
+}
+
+function formatDecimal(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toFixed(2);
+}
+
+function showToast(message, type = 'gold') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.textContent = message;
+  container.appendChild(toast);
+  
+  setTimeout(() => {
+    if (toast.parentNode) toast.remove();
+  }, 2800);
+}
+
+function showModal(content) {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = '<div class="modal-box">' + content + '</div>';
+  
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeModal();
+  });
+  
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function closeModal() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+}
+
+function copyToClipboard(text) {
+  // Modern approach
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Скопировано!', 'success');
+    }).catch(() => {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.cssText = 'position:fixed;left:-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    showToast('Скопировано!', 'success');
+  } catch (e) {
+    showToast('Ошибка копирования', 'error');
+  }
+  
+  document.body.removeChild(textarea);
+}
+
+// ==================== INVENTORY FUNCTIONS ====================
+function addItemToInventory(itemId, quantity = 1) {
+  const existing = game.inventory.find(i => i.id === itemId);
+  if (existing) {
+    existing.quantity += quantity;
+  } else {
+    game.inventory.push({ id: itemId, quantity });
+  }
+}
+
+function removeItemFromInventory(itemId, quantity = 1) {
+  const index = game.inventory.findIndex(i => i.id === itemId);
+  if (index === -1) return false;
+  
+  game.inventory[index].quantity -= quantity;
+  if (game.inventory[index].quantity <= 0) {
+    game.inventory.splice(index, 1);
+  }
+  return true;
+}
+
+// ==================== MARKET PRICES ====================
+function generateMarketPrices() {
+  const today = Math.floor(Date.now() / 86400000);
+  if (game.marketDay === today) return;
+  
+  game.marketDay = today;
+  game.marketPrices = {};
+  
+  ITEMS.forEach(item => {
+    let hash = 0;
+    const str = item.id + today;
+    for (let i = 0; i < str.length; i++) {
+      hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
+    }
+    game.marketPrices[item.id] = Math.floor(item.basePrice * (0.7 + Math.abs(hash) % 70 / 100));
+  });
+}
+
+function getUpgradeCost(upgrade) {
+  const level = game.upgrades[upgrade.id] || 0;
+  return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMult, level));
+}
+
+// ==================== NAVIGATION ====================
+function navigate(screenName, buttonElement) {
+  currentScreen = screenName;
+  
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const screenEl = document.getElementById(screenName + 'Screen');
+  if (screenEl) screenEl.classList.add('active');
+  
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (buttonElement) buttonElement.classList.add('active');
+  else {
+    const navBtn = document.querySelector(`.nav-btn[data-screen="${screenName}"]`);
+    if (navBtn) navBtn.classList.add('active');
+  }
+  
+  switch (screenName) {
+    case 'shop': renderShop(); break;
+    case 'crypto': renderCrypto(); break;
+    case 'quests': renderQuests(); break;
+    case 'clan': renderClan(); break;
+    case 'social': renderSocial(); break;
+  }
+}
+
+// ==================== COIN CLICKER ====================
+function handleCoinClick(event) {
+  const coinZone = document.getElementById('coinZone');
+  const rect = coinZone.getBoundingClientRect();
+  
+  let isCrit = false;
+  let clickPower = game.power;
+  
+  if (game.critChance > 0 && Math.random() * 100 < game.critChance) {
+    isCrit = true;
+    clickPower = Math.floor(clickPower * game.critMultiplier);
+    game.totalCrits++;
+  }
+  
+  game.coins += clickPower;
+  game.totalCoins += clickPower;
+  game.totalClicks++;
+  
+  if (clickPower > game.maxClick) game.maxClick = clickPower;
+  
+  game.xp += Math.max(1, Math.floor(clickPower / 5));
+  
+  const floatNum = document.createElement('div');
+  floatNum.className = 'float-num' + (isCrit ? ' crit' : '');
+  floatNum.textContent = (isCrit ? 'КРИТ! +' : '+') + formatNumber(clickPower);
+  
+  const clientX = event.clientX || (rect.left + rect.width / 2);
+  const clientY = event.clientY || (rect.top + rect.height / 2);
+  
+  floatNum.style.left = (clientX - rect.left - 25) + 'px';
+  floatNum.style.top = (clientY - rect.top - 15) + 'px';
+  
+  coinZone.appendChild(floatNum);
+  setTimeout(() => floatNum.remove(), 900);
+  
+  const burst = document.createElement('div');
+  burst.className = 'burst';
+  burst.style.left = '20px';
+  burst.style.top = '20px';
+  coinZone.appendChild(burst);
+  setTimeout(() => burst.remove(), 400);
+  
+  checkLevelUp();
+  updateUI();
+  trackQuestProgress('clicks', 1);
+  trackQuestProgress('earn', clickPower);
+}
+
+function checkLevelUp() {
+  while (game.xp >= game.xpNeeded) {
+    game.xp -= game.xpNeeded;
+    game.level++;
+    game.xpNeeded = Math.floor(100 * Math.pow(1.3, game.level - 1));
+    game.power += Math.max(1, Math.floor(game.level / 3));
+    
+    showToast('Уровень ' + game.level + '!', 'gold');
+    
+    const flash = document.createElement('div');
+    flash.className = 'level-flash';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 800);
+  }
+}
+
+// ==================== DAILY BONUS ====================
+function claimDailyBonus() {
+  const now = Date.now();
+  const cooldown = 86400000;
+  
+  if (game.lastDailyTime && now - game.lastDailyTime < cooldown) {
+    showToast('Бонус уже получен сегодня!', 'error');
+    return;
+  }
+  
+  const bonus = Math.floor(500 * game.level);
+  game.coins += bonus;
+  game.totalCoins += bonus;
+  game.lastDailyTime = now;
+  
+  showToast('Бонус: +' + formatNumber(bonus), 'gold');
+  updateUI();
+  saveGame();
+}
+
+// ==================== SHOP ====================
+function switchShopTab(tab) {
+  currentShopTab = tab;
+  
+  document.querySelectorAll('.shop-tab').forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.classList.toggle('btn-primary', isActive);
+    btn.classList.toggle('btn-secondary', !isActive);
+  });
+  
+  renderShop();
+}
+
+function buyUpgrade(upgradeId) {
+  const upgrade = UPGRADES.find(u => u.id === upgradeId);
+  if (!upgrade) return;
+  
+  const currentLevel = game.upgrades[upgradeId] || 0;
+  if (currentLevel >= upgrade.maxLevel) {
+    showToast('Максимальный уровень!', 'error');
+    return;
+  }
+  
+  const cost = getUpgradeCost(upgrade);
+  if (game.coins < cost) {
+    showToast('Недостаточно золота!', 'error');
+    return;
+  }
+  
+  game.coins -= cost;
+  game.upgrades[upgradeId] = currentLevel + 1;
+  game.totalBuys++;
+  
+  switch (upgrade.effect) {
+    case 'power': game.power += upgrade.value; break;
+    case 'auto': game.autoIncome += upgrade.value; break;
+    case 'crit': game.critChance += upgrade.value; break;
+    case 'critMult': game.critMultiplier += upgrade.value; break;
+  }
+  
+  showToast(upgrade.name + ' ур.' + (currentLevel + 1), 'success');
+  trackQuestProgress('buy', 1);
+  
+  renderShop();
+  updateUI();
+  saveGame();
+}
+
+function buyItem(itemId) {
+  generateMarketPrices();
+  const price = game.marketPrices[itemId];
+  
+  if (game.coins < price) {
+    showToast('Недостаточно золота!', 'error');
+    return;
+  }
+  
+  game.coins -= price;
+  addItemToInventory(itemId);
+  game.totalBuys++;
+  
+  const item = ITEMS.find(i => i.id === itemId);
+  showToast('Куплен: ' + item.name, 'success');
+  
+  renderShop();
+  updateUI();
+  saveGame();
+}
+
+function sellItem(itemId) {
+  const item = ITEMS.find(i => i.id === itemId);
+  if (!item) return;
+  
+  if (!removeItemFromInventory(itemId)) {
+    showToast('Нет предметов для продажи!', 'error');
+    return;
+  }
+  
+  const sellPrice = Math.floor(item.basePrice * 0.6);
+  game.coins += sellPrice;
+  game.totalCoins += sellPrice;
+  game.itemsSold++;
+  
+  showToast('Продано: ' + item.name + ' за ' + formatNumber(sellPrice), 'gold');
+  trackQuestProgress('sell', 1);
+  
+  renderShop();
+  updateUI();
+  saveGame();
+}
+
+function renderShop() {
+  const container = document.getElementById('shopContent');
+  
+  if (currentShopTab === 'upgrades') {
+    container.innerHTML = UPGRADES.map(upgrade => {
+      const level = game.upgrades[upgrade.id] || 0;
+      const cost = getUpgradeCost(upgrade);
+      const isMaxed = level >= upgrade.maxLevel;
+      const canAfford = game.coins >= cost && !isMaxed;
+      
+      return `
+        <div class="card flex items-center gap-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center" 
+               style="background: rgba(245, 166, 35, 0.12); color: var(--accent);">
+            <i class="fas ${upgrade.icon}"></i>
+          </div>
+          <div class="flex-1">
+            <div class="font-bold text-sm">${upgrade.name} 
+              <span style="color: var(--muted)">ур.${level}</span>
+            </div>
+            <div class="text-xs" style="color: var(--muted)">${upgrade.desc}</div>
+          </div>
+          <button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" 
+                  style="font-size: 12px;"
+                  onclick="buyUpgrade('${upgrade.id}')"
+                  ${canAfford ? '' : 'disabled'}>
+            ${isMaxed ? 'MAX' : formatNumber(cost)}
+          </button>
+        </div>
+      `;
+    }).join('');
+    
+  } else if (currentShopTab === 'market') {
+    generateMarketPrices();
+    
+    container.innerHTML = ITEMS.map(item => {
+      const price = game.marketPrices[item.id];
+      const canAfford = game.coins >= price;
+      const rarityClass = RARITY_CLASSES[item.rarity];
+      
+      return `
+        <div class="card item-card border-${rarityClass}">
+          <div class="flex items-center gap-2">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-${rarityClass} rarity-${rarityClass}">
+              <i class="fas ${item.icon}"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-bold text-sm rarity-${rarityClass}">${item.name}</div>
+              <div class="text-xs" style="color: var(--muted)">Цена: ${formatNumber(price)}</div>
+            </div>
+            <button class="btn ${canAfford ? 'btn-primary' : 'btn-secondary'}" 
+                    style="font-size: 11px;"
+                    onclick="buyItem('${item.id}')"
+                    ${canAfford ? '' : 'disabled'}>
+              <i class="fas fa-cart-plus"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+  } else {
+    const totalItems = game.inventory.reduce((sum, i) => sum + i.quantity, 0);
+    
+    if (totalItems === 0) {
+      container.innerHTML = `
+        <div class="text-center py-6" style="color: var(--muted)">
+          <i class="fas fa-box-open text-3xl mb-2"></i>
+          <div>Инвентарь пуст</div>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = game.inventory.map(inv => {
+      const item = ITEMS.find(i => i.id === inv.id);
+      if (!item) return '';
+      
+      const sellPrice = Math.floor(item.basePrice * 0.6);
+      const rarityClass = RARITY_CLASSES[item.rarity];
+      
+      return `
+        <div class="card item-card border-${rarityClass}">
+          <div class="flex items-center gap-2">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-${rarityClass} rarity-${rarityClass}">
+              <i class="fas ${item.icon}"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-bold text-sm rarity-${rarityClass}">${item.name} 
+                <span style="color: var(--muted)">x${inv.quantity}</span>
+              </div>
+              <div class="text-xs" style="color: var(--muted)">Продажа: ${formatNumber(sellPrice)}</div>
+            </div>
+            <button class="btn btn-success" style="font-size: 11px;" onclick="sellItem('${item.id}')">
+              <i class="fas fa-coins"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ==================== CRYPTO ====================
+function renderCrypto() {
+  const container = document.getElementById('cryptoContent');
+  const history = game.tokenHistory;
+  const priceChange = history.length > 1 ? game.tokenPrice - history[history.length - 2] : 0;
+  const percentChange = history.length > 1 && history[history.length - 2] > 0 
+    ? ((priceChange / history[history.length - 2]) * 100).toFixed(2) 
+    : 0;
+  const isUp = priceChange >= 0;
+  
+  container.innerHTML = `
+    <div class="card" style="border-color: var(--accent)">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <div class="token-logo">G</div>
+          <div><div class="font-bold">$GCLK</div></div>
+        </div>
+        ${game.hasWallet 
+          ? '<span class="wallet-badge"><i class="fas fa-check-circle"></i> TON</span>'
+          : `<button class="btn btn-info" style="font-size: 11px;" onclick="connectWallet()">
+               <i class="fas fa-wallet"></i>
+             </button>`
+        }
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <div class="text-xs" style="color: var(--muted)">Баланс</div>
+          <div class="russo text-lg ${isUp ? 'crypto-up' : 'crypto-down'}">${formatDecimal(game.tokens)}</div>
+        </div>
+        <div>
+          <div class="text-xs" style="color: var(--muted)">Стейк</div>
+          <div class="russo text-lg" style="color: var(--accent)">${formatDecimal(game.stakeAmount)}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="flex justify-between items-end mb-1">
+        <div>
+          <div class="text-xs" style="color: var(--muted)">Цена</div>
+          <div class="russo text-xl ${isUp ? 'crypto-up' : 'crypto-down'}">${formatNumber(game.tokenPrice)}</div>
+        </div>
+        <div class="text-right text-xs font-bold ${isUp ? 'crypto-up' : 'crypto-down'}">
+          <i class="fas fa-caret-${isUp ? 'up' : 'down'}"></i> ${Math.abs(percentChange)}%
+        </div>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="cryptoChart"></canvas>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="trade-tabs">
+        <button class="${game.tradeMode === 'buy' ? 'active-buy' : ''}" 
+                onclick="setTradeMode('buy')">Купить</button>
+        <button class="${game.tradeMode === 'sell' ? 'active-sell' : ''}" 
+                onclick="setTradeMode('sell')">Продать</button>
+      </div>
+      ${game.tradeMode === 'buy' ? `
+        <div class="text-xs mb-1" style="color: var(--muted)">1 $GCLK = ${formatNumber(game.tokenPrice)} золота</div>
+        <div class="flex gap-2">
+          <input type="number" id="buyAmount" min="1" value="1" placeholder="Количество">
+          <button class="btn btn-success" style="font-size: 11px;" onclick="buyTokens()">
+            <i class="fas fa-cart-plus"></i>
+          </button>
+        </div>
+      ` : `
+        <div class="text-xs mb-1" style="color: var(--muted)">1 $GCLK = ${formatNumber(game.tokenPrice)} золота</div>
+        <div class="flex gap-2">
+          <input type="number" id="sellAmount" min="1" value="1" placeholder="Количество">
+          <button class="btn btn-danger" style="font-size: 11px;" onclick="sellTokens()">
+            <i class="fas fa-hand-holding-dollar"></i>
+          </button>
+        </div>
+      `}
+    </div>
+    
+    <div class="card">
+      <div class="font-bold text-sm mb-1" style="color: var(--accent)">
+        <i class="fas fa-landmark mr-1"></i>Стейкинг 10%/ч
+      </div>
+      <div class="flex gap-2">
+        <input type="number" id="stakeAmount" min="1" value="1" placeholder="Количество">
+        <button class="btn btn-primary" style="font-size: 11px;" onclick="stakeTokens()">
+          <i class="fas fa-lock"></i>
+        </button>
+      </div>
+      ${game.stakeAmount > 0 ? `
+        <button class="btn btn-danger w-full mt-2" style="font-size: 11px;" onclick="unstakeTokens()">
+          <i class="fas fa-lock-open"></i> Разморозить
+        </button>
+      ` : ''}
+    </div>
+  `;
+  
+  drawCryptoChart();
+}
+
+function setTradeMode(mode) {
+  game.tradeMode = mode;
+  renderCrypto();
+  saveGame();
+}
+
+function connectWallet() {
+  game.hasWallet = true;
+  showToast('Кошелёк подключён!', 'success');
+  renderCrypto();
+  saveGame();
+}
+
+function buyTokens() {
+  const amount = parseInt(document.getElementById('buyAmount')?.value) || 0;
+  if (amount < 1) {
+    showToast('Минимум 1 токен!', 'error');
+    return;
+  }
+  
+  const cost = amount * game.tokenPrice;
+  if (game.coins < cost) {
+    showToast('Недостаточно золота!', 'error');
+    return;
+  }
+  
+  game.coins -= cost;
+  game.tokens += amount;
+  trackQuestProgress('cryptoBuy', 1);
+  
+  showToast('Куплено: ' + amount + ' $GCLK', 'success');
+  renderCrypto();
+  updateUI();
+  saveGame();
+}
+
+function sellTokens() {
+  const amount = parseInt(document.getElementById('sellAmount')?.value) || 0;
+  if (amount < 1 || game.tokens < amount) {
+    showToast('Недостаточно токенов!', 'error');
+    return;
+  }
+  
+  game.tokens -= amount;
+  const goldEarned = amount * game.tokenPrice;
+  game.coins += goldEarned;
+  game.totalCoins += goldEarned;
+  
+  showToast('Продано за ' + formatNumber(goldEarned) + ' золота', 'gold');
+  renderCrypto();
+  updateUI();
+  saveGame();
+}
+
+function stakeTokens() {
+  const amount = parseInt(document.getElementById('stakeAmount')?.value) || 0;
+  if (amount < 1 || game.tokens < amount) {
+    showToast('Недостаточно токенов!', 'error');
+    return;
+  }
+  
+  game.tokens -= amount;
+  game.stakeAmount += amount;
+  
+  showToast(amount + ' $GCLK в стейке', 'success');
+  renderCrypto();
+  saveGame();
+}
+
+function unstakeTokens() {
+  game.tokens += game.stakeAmount;
+  showToast(formatDecimal(game.stakeAmount) + ' $GCLK разморожено', 'success');
+  game.stakeAmount = 0;
+  renderCrypto();
+  saveGame();
+}
+
+function updateTokenPrice() {
+  const change = (Math.random() - 0.48) * game.tokenPrice * 0.06;
+  game.tokenPrice = Math.max(1, game.tokenPrice + change);
+  game.tokenHistory.push(game.tokenPrice);
+  
+  if (game.tokenHistory.length > 35) {
+    game.tokenHistory.shift();
+  }
+  
+  if (currentScreen === 'crypto') {
+    renderCrypto();
+  }
+}
+
+function drawCryptoChart() {
+  const canvas = document.getElementById('cryptoChart');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const wrapper = canvas.parentElement;
+  const width = wrapper.clientWidth;
+  const height = wrapper.clientHeight;
+  
+  if (width < 5) return;
+  
+  canvas.width = width;
+  canvas.height = height;
+  
+  const data = game.tokenHistory;
+  if (!Array.isArray(data) || data.length < 2) return;
+  
+  const minVal = Math.min(...data) * 0.95;
+  const maxVal = Math.max(...data) * 1.05;
+  if (minVal === maxVal) return;
+  
+  ctx.clearRect(0, 0, width, height);
+  
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  data.forEach((val, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((val - minVal) / (maxVal - minVal)) * height;
+    ctx.lineTo(x, y);
+  });
+  ctx.lineTo(width, height);
+  ctx.closePath();
+  
+  const isUp = data[data.length - 1] >= data[0];
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, isUp ? 'rgba(0, 200, 83, 0.25)' : 'rgba(255, 23, 68, 0.25)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  
+  ctx.beginPath();
+  data.forEach((val, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((val - minVal) / (maxVal - minVal)) * height;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = isUp ? '#00c853' : '#ff1744';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ==================== QUESTS ====================
+function switchQuestTab(tab) {
+  currentQuestTab = tab;
+  
+  document.querySelectorAll('.quest-tab').forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.classList.toggle('btn-primary', isActive);
+    btn.classList.toggle('btn-secondary', !isActive);
+  });
+  
+  renderQuests();
+}
+
+function getDailyQuests() {
+  const today = Math.floor(Date.now() / 86400000);
+  const quests = [];
+  
+  for (let i = 0; i < 4; i++) {
+    const template = DAILY_QUESTS[(today + i) % DAILY_QUESTS.length];
+    const multiplier = 1 + Math.floor(game.level / 5);
+    const target = Math.floor(template.target * multiplier);
+    const reward = Math.floor(template.reward * multiplier);
+    const questKey = 'dq_' + template.id + '_' + today;
+    
+    quests.push({
+      ...template,
+      description: template.descTemplate.replace('{n}', formatNumber(target)),
+      target: target,
+      reward: reward,
+      progress: game.questProgress[questKey] || 0,
+      claimed: !!game.questProgress[questKey + '_claimed'],
+      key: questKey
+    });
+  }
+  
+  return quests;
+}
+
+function getAchievementValue(type) {
+  switch (type) {
+    case 'clicks': return game.totalClicks;
+    case 'total': return game.totalCoins;
+    case 'buy': return game.totalBuys;
+    case 'sold': return game.itemsSold;
+    case 'level': return game.level;
+    case 'clan': return game.clanId ? 1 : 0;
+    case 'items': return game.inventory.reduce((sum, i) => sum + i.quantity, 0);
+    case 'cryptoBuy': return game.tokens > 0 ? 1 : 0;
+    default: return 0;
+  }
+}
+
+function trackQuestProgress(type, amount) {
+  getDailyQuests().forEach(q => {
+    if (q.claimed || q.type !== type) return;
+    if (!game.questProgress[q.key]) game.questProgress[q.key] = 0;
+    game.questProgress[q.key] = Math.min(q.target, (game.questProgress[q.key] || 0) + amount);
+  });
+  
+  ACHIEVEMENTS.forEach(a => {
+    game.questProgress['a_' + a.id] = getAchievementValue(a.type);
+  });
+  
+  updateQuestBadge();
+}
+
+function claimDailyQuest(questKey, reward) {
+  if (game.questProgress[questKey + '_claimed']) return;
+  
+  game.questProgress[questKey + '_claimed'] = true;
+  game.coins += reward;
+  game.totalCoins += reward;
+  
+  showToast('+' + formatNumber(reward), 'gold');
+  renderQuests();
+  updateUI();
+  saveGame();
+}
+
+function claimAchievement(achievementId, reward) {
+  const key = 'a_' + achievementId + '_claimed';
+  if (game.questProgress[key]) return;
+  
+  game.questProgress[key] = true;
+  game.coins += reward;
+  game.totalCoins += reward;
+  
+  showToast('Достижение! +' + formatNumber(reward), 'gold');
+  renderQuests();
+  updateUI();
+  saveGame();
+}
+
+function updateQuestBadge() {
+  let count = 0;
+  
+  getDailyQuests().forEach(q => {
+    if (q.progress >= q.target && !q.claimed) count++;
+  });
+  
+  ACHIEVEMENTS.forEach(a => {
+    if (getAchievementValue(a.type) >= a.target && !game.questProgress['a_' + a.id + '_claimed']) {
+      count++;
+    }
+  });
+  
+  const badge = document.getElementById('questBadge');
+  if (count > 0) {
+    badge.style.display = 'block';
+    badge.textContent = count;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderQuests() {
+  const container = document.getElementById('questContent');
+  
+  if (currentQuestTab === 'daily') {
+    container.innerHTML = getDailyQuests().map(quest => {
+      const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
+      const isComplete = quest.progress >= quest.target;
+      
+      return `
+        <div class="card">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" 
+                 style="background: rgba(245, 166, 35, 0.12); color: var(--accent);">
+              <i class="fas ${quest.icon}"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-bold text-sm">${quest.description}</div>
+              <div class="progress-bar mt-1">
+                <div class="progress-fill" style="width: ${progressPercent}%"></div>
+              </div>
+              <div class="text-xs" style="color: var(--muted)">
+                ${Math.min(quest.progress, quest.target)} / ${quest.target}
+              </div>
+            </div>
+            ${quest.claimed 
+              ? '<i class="fas fa-check-circle" style="color: var(--success)"></i>'
+              : isComplete 
+                ? `<button class="btn btn-success" style="font-size: 11px;" 
+                          onclick="claimDailyQuest('${quest.key}', ${quest.reward})">
+                     <i class="fas fa-gift"></i>
+                   </button>`
+                : ''
+            }
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+  } else {
+    container.innerHTML = ACHIEVEMENTS.map(ach => {
+      const value = getAchievementValue(ach.type);
+      const progressPercent = Math.min(100, (value / ach.target) * 100);
+      const isComplete = value >= ach.target;
+      const isClaimed = !!game.questProgress['a_' + ach.id + '_claimed'];
+      
+      return `
+        <div class="card">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" 
+                 style="background: ${isClaimed ? 'rgba(76, 175, 80, 0.12)' : 'rgba(245, 166, 35, 0.12)'}; 
+                        color: ${isClaimed ? 'var(--success)' : 'var(--accent)'};">
+              <i class="fas ${ach.icon}"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-bold text-sm">${ach.name}</div>
+              <div class="progress-bar mt-1">
+                <div class="progress-fill" style="width: ${progressPercent}%"></div>
+              </div>
+            </div>
+            ${isClaimed 
+              ? '<i class="fas fa-check-circle" style="color: var(--success)"></i>'
+              : isComplete 
+                ? `<button class="btn btn-success" style="font-size: 11px;" 
+                          onclick="claimAchievement('${ach.id}', ${ach.reward})">
+                     <i class="fas fa-gift"></i>
+                   </button>`
+                : ''
+            }
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ==================== CLAN ====================
+function renderClan() {
+  const container = document.getElementById('clanContent');
+  
+  if (game.clanId) {
+    const clan = CLANS.find(c => c.id === game.clanId) || { 
+      name: game.clanId, desc: 'Ваш клан', icon: 'fa-shield-halved', color: 'var(--accent)' 
+    };
+    
+    container.innerHTML = `
+      <div class="card text-center">
+        <div class="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center text-xl" 
+             style="background: ${clan.color}22; color: ${clan.color};">
+          <i class="fas ${clan.icon}"></i>
+        </div>
+        <div class="russo">${clan.name}</div>
+      </div>
+      
+      <div class="card">
+        <div class="font-bold text-sm mb-1" style="color: var(--accent)">
+          <i class="fas fa-comments mr-1"></i>Чат
+        </div>
+        <div id="clanChat" style="max-height: 180px; overflow-y: auto; margin-bottom: 6px;">
+          ${renderClanChat()}
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="chatInput" placeholder="Сообщение..." 
+                 class="flex-1 px-2 py-1.5 rounded-lg text-xs"
+                 onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="btn btn-primary" style="font-size: 11px;" onclick="sendChatMessage()">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+      
+      <button class="btn btn-danger w-full mt-2" style="font-size: 12px;" onclick="leaveClan()">
+        <i class="fas fa-right-from-bracket"></i> Выйти из клана
+      </button>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="text-center mb-4" style="color: var(--muted)">
+        <i class="fas fa-shield-halved text-3xl mb-2" style="color: var(--accent)"></i>
+        <div class="text-sm">Вы не состоите в клане</div>
+      </div>
+      
+      <button class="btn btn-primary w-full mb-3" style="font-size: 12px;" onclick="showCreateClanModal()">
+        <i class="fas fa-plus"></i> Создать клан (5000)
+      </button>
+      
+      ${CLANS.map(clan => `
+        <div class="card flex items-center gap-2">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center" 
+               style="background: ${clan.color}22; color: ${clan.color};">
+            <i class="fas ${clan.icon}"></i>
+          </div>
+          <div class="flex-1">
+            <div class="font-bold text-sm" style="color: ${clan.color};">${clan.name}</div>
+            <div class="text-xs" style="color: var(--muted)">${clan.desc}</div>
+          </div>
+          <button class="btn ${game.level >= clan.reqLevel ? 'btn-success' : 'btn-secondary'}" 
+                  style="font-size: 11px;"
+                  onclick="joinClan('${clan.id}')"
+                  ${game.level >= clan.reqLevel ? '' : 'disabled'}>
+            ${game.level >= clan.reqLevel ? 'Вступить' : 'Ур.' + clan.reqLevel}
+          </button>
+        </div>
+      `).join('')}
+    `;
+  }
+}
+
+function renderClanChat() {
+  if (!game.clanChat.length) {
+    return '<div class="text-center text-xs py-3" style="color: var(--muted)">Чат пуст</div>';
+  }
+  
+  return game.clanChat.slice(-15).map(msg => `
+    <div class="py-0.5 text-xs">
+      <span class="font-bold" style="color: var(--accent)">${msg.author}</span>: ${msg.text}
+    </div>
+  `).join('');
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  game.clanChat.push({ author: game.playerName, text: text });
+  input.value = '';
+  
+  setTimeout(() => {
+    const responses = ['Ок!', 'Го!', 'Сила!', 'За клан!'];
+    const botNames = ['Страж', 'Рыцарь'];
+    game.clanChat.push({
+      author: botNames[Math.floor(Math.random() * botNames.length)],
+      text: responses[Math.floor(Math.random() * responses.length)]
+    });
+    
+    const chatEl = document.getElementById('clanChat');
+    if (chatEl) {
+      chatEl.innerHTML = renderClanChat();
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+    saveGame();
+  }, 2000);
+  
+  const chatEl = document.getElementById('clanChat');
+  if (chatEl) {
+    chatEl.innerHTML = renderClanChat();
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+  saveGame();
+}
+
+function joinClan(clanId) {
+  game.clanId = clanId;
+  game.clanChat = [];
+  showToast('Вы вступили в клан!', 'success');
+  trackQuestProgress('clan', 1);
+  renderClan();
+  saveGame();
+}
+
+function leaveClan() {
+  game.clanId = null;
+  game.clanChat = [];
+  showToast('Вы вышли из клана', 'info');
+  renderClan();
+  saveGame();
+}
+
+function showCreateClanModal() {
+  if (game.coins < 5000) {
+    showToast('Нужно 5000 золота!', 'error');
+    return;
+  }
+  
+  showModal(`
+    <h3 class="russo text-lg mb-3" style="color: var(--accent)">Создать клан</h3>
+    <input type="text" id="newClanName" maxlength="20" placeholder="Название клана..." 
+           class="w-full px-2 py-1.5 rounded-lg mb-3 text-sm">
+    <button class="btn btn-primary w-full" style="font-size: 12px;" onclick="createClan()">
+      Создать
+    </button>
+  `);
+}
+
+function createClan() {
+  const nameInput = document.getElementById('newClanName');
+  const name = nameInput.value.trim();
+  if (!name) {
+    showToast('Введите название!', 'error');
+    return;
+  }
+  
+  game.coins -= 5000;
+  game.clanId = name;
+  game.clanChat = [];
+  
+  CLANS.push({
+    id: name,
+    name: name,
+    desc: 'Клан',
+    icon: 'fa-shield-halved',
+    color: 'var(--accent)',
+    reqLevel: 1
+  });
+  
+  closeModal();
+  showToast('Клан "' + name + '" создан!', 'success');
+  trackQuestProgress('clan', 1);
+  renderClan();
+  updateUI();
+  saveGame();
+}
+
+// ==================== SOCIAL / FRIENDS ====================
+function switchSocialTab(tab) {
+  currentSocialTab = tab;
+  
+  document.querySelectorAll('.social-tab').forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.classList.toggle('btn-primary', isActive);
+    btn.classList.toggle('btn-secondary', !isActive);
+  });
+  
+  renderSocial();
+}
+
+// ==================== FRIEND SYSTEM WITH QR & LINKS ====================
+
+/**
+ * Кодирует данные игрока в Base64 строку для передачи через ссылку
+ */
+function encodePlayerData() {
+  try {
+    const data = {
+      i: game.playerId,
+      n: game.playerName,
+      l: game.level,
+      c: game.totalCoins,
+      fc: game.friendCode
+    };
+    return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  } catch (e) {
+    console.error('Encode error:', e);
+    return '';
+  }
+}
+
+/**
+ * Декодирует данные игрока из Base64 строки
+ */
+function decodePlayerData(str) {
+  try {
+    return JSON.parse(decodeURIComponent(escape(atob(str))));
+  } catch (e) {
+    console.error('Decode error:', e);
+    return null;
+  }
+}
+
+/**
+ * Генерирует полную ссылку приглашения
+ */
+function getInviteLink() {
+  const encoded = encodePlayerData();
+  if (!encoded) return window.location.href.split('?')[0];
+  
+  const baseUrl = window.location.href.split('?')[0].split('#')[0] || window.location.origin + window.location.pathname;
+  return baseUrl + '?ref=' + encoded;
+}
+
+/**
+ * Проверяет URL на наличие параметра приглашения и показывает запрос дружбы
+ */
+function checkFriendRequestFromURL() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const refData = params.get('ref');
+    
+    if (!refData) return;
+    
+    const decoded = decodePlayerData(refData);
+    if (!decoded || !decoded.i || decoded.i === game.playerId) return;
+    
+    // Проверяем, не друг ли уже
+    if (game.friends.find(f => f.id === decoded.i)) {
+      showToast(decoded.n + ' уже ваш друг!', 'info');
+      cleanURL();
+      return;
+    }
+    
+    showIncomingFriendRequest(decoded);
+  } catch (e) {
+    console.error('URL check error:', e);
+  }
+}
+
+/**
+ * Очищает URL от параметра реферала
+ */
+function cleanURL() {
+  try {
+    const url = new URL(window.location);
+    url.searchParams.delete('ref');
+    history.replaceState({}, '', url.toString());
+  } catch (e) {}
+}
+
+/**
+ * Показывает модальное окно с входящим запросом дружбы
+ */
+function showIncomingFriendRequest(playerData) {
+  pendingFriendRequest = playerData;
+  
+  document.getElementById('friendRequestArea').innerHTML = `
+    <div class="card" style="background: linear-gradient(135deg, var(--accent), var(--accent2)); margin-bottom: 14px;">
+      <div class="flex items-center gap-2">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold" 
+             style="background: rgba(0, 0, 0, 0.15); color: #000;">
+          ${playerData.n[0]}
+        </div>
+        <div>
+          <div class="font-bold" style="color: #000;">${playerData.n}</div>
+          <div class="text-xs opacity-70" style="color: #000;">Ур.${playerData.l} хочет дружить!</div>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-2">
+        <button class="btn flex-1" style="background: #000; color: var(--accent);" onclick="acceptFriendRequest()">
+          <i class="fas fa-check"></i> Принять
+        </button>
+        <button class="btn btn-danger" style="font-size: 12px;" onclick="declineFriendRequest()">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  
+  navigate('social');
+}
+
+/**
+ * Принимает запрос дружбы
+ */
+function acceptFriendRequest() {
+  if (!pendingFriendRequest) return;
+  
+  const pr = pendingFriendRequest;
+  
+  if (!game.friends.find(f => f.id === pr.i)) {
+    game.friends.push({
+      id: pr.i,
+      name: pr.n,
+      level: pr.l,
+      coins: pr.c || 0,
+      online: true,
+      friendCode: pr.fc || ''
+    });
+  }
+  
+  showToast(pr.n + ' теперь ваш друг! 🎉', 'success');
+  pendingFriendRequest = null;
+  document.getElementById('friendRequestArea').innerHTML = '';
+  cleanURL();
+  renderSocial();
+  saveGame();
+}
+
+/**
+ * Отклоняет запрос дружбы
+ */
+function declineFriendRequest() {
+  pendingFriendRequest = null;
+  document.getElementById('friendRequestArea').innerHTML = '';
+  cleanURL();
+}
+
+/**
+ * Показывает расширенное модальное окно добавления друга с QR-кодом и ссылкой
+ */
+function showAddFriendModal() {
+  const link = getInviteLink();
+  const fullLink = window.location.origin + window.location.pathname + '?ref=' + encodePlayerData();
+  
+  showModal(`
+    <h3 class="russo text-lg mb-3" style="color: var(--accent)">
+      <i class="fas fa-user-plus mr-1"></i>Добавить друга
+    </h3>
+    
+    <!-- Ваш код дружбы -->
+    <div class="friend-code-display">
+      <div class="code-label"><i class="fas fa-key mr-1"></i>Ваш код дружбы:</div>
+      <div class="code-text" id="myFriendCodeDisplay">${game.friendCode}</div>
+      <button class="btn btn-info" style="font-size: 11px; margin-top: 5px;" 
+              onclick="copyToClipboard('${game.friendCode}')">
+        <i class="fas fa-copy mr-1"></i>Копировать код
+      </button>
+    </div>
+    
+    <!-- Ввод кода друга -->
+    <div class="mb-3">
+      <div class="text-xs font-bold mb-1" style="color: var(--muted)">
+        <i class="fas fa-search mr-1"></i>Введите код друга:
+      </div>
+      <div class="flex gap-2">
+        <input type="text" id="friendCodeInput" maxlength="13" placeholder="F-XXXX-YYYY" 
+               class="flex-1 px-2 py-1.5 rounded-lg text-sm" style="text-transform: uppercase;">
+        <button class="btn btn-success" style="font-size: 11px;" onclick="addFriendByCode()">
+          <i class="fas fa-user-plus"></i>
+        </button>
+      </div>
+    </div>
+    
+    <hr style="border-color: var(--border); margin: 15px 0;">
+    
+    <!-- Ссылка приглашения -->
+    <div class="mb-3">
+      <div class="text-xs font-bold mb-2" style="color: var(--accent)">
+        <i class="fas fa-link mr-1"></i>Ссылка приглашения:
+      </div>
+      <div class="link-box" onclick="copyToClipboard('${fullLink}')" title="Нажмите чтобы скопировать">
+        <i class="fas fa-link mr-1"></i>${fullLink.substring(0, 40)}...
+      </div>
+    </div>
+    
+    <!-- Кнопки шаринга -->
+    <div class="share-buttons">
+      <button class="share-btn share-copy" onclick="copyToClipboard('${fullLink}')">
+        <i class="fas fa-copy"></i> Копировать
+      </button>
+      <button class="share-btn share-telegram" onclick="shareToTelegram('${fullLink}')">
+        <i class="fab fa-telegram"></i> Telegram
+      </button>
+      <button class="share-btn share-whatsapp" onclick="shareToWhatsApp('${fullLink}')">
+        <i class="fab fa-whatsapp"></i> WhatsApp
+      </button>
+      <button class="share-btn share-qrcode" onclick="showQRCodeModal()">
+        <i class="fas fa-qrcode"></i> QR-код
+      </button>
+    </div>
+    
+    <hr style="border-color: var(--border); margin: 15px 0;">
+    
+    <button class="btn btn-secondary w-full" style="font-size: 12px;" onclick="closeModal()">Закрыть</button>
+  `);
+}
+
+/**
+ * Добавляет друга по введённому коду
+ */
+function addFriendByCode() {
+  const input = document.getElementById('friendCodeInput');
+  if (!input) return;
+  
+  const code = input.value.trim().toUpperCase();
+  if (!code) {
+    showToast('Введите код друга!', 'error');
+    return;
+  }
+  
+  if (code === game.friendCode) {
+    showToast('Это ваш собственный код! 😅', 'error');
+    return;
+  }
+  
+  if (game.friends.find(f => (f.friendCode || '').toUpperCase() === code)) {
+    showToast('Этот игрок уже ваш друг!', 'info');
+    return;
+  }
+  
+  // Проверяем ботов
+  const bot = BOTS.find(b => b.friendCode.toUpperCase() === code);
+  if (bot) {
+    game.friends.push({
+      id: bot.id,
+      name: bot.name,
+      level: bot.level,
+      coins: 0,
+      online: true,
+      friendCode: bot.friendCode
+    });
+    showToast(bot.name + ' добавлен в друзья! 🤖', 'success');
+    input.value = '';
+    closeModal();
+    renderSocial();
+    saveGame();
+    return;
+  }
+  
+  // Генерируем случайного "найденного" игрока
+  const strangerId = 't_' + Date.now();
+  const strangerName = 'Игрок_' + code.replace(/-/g, '').substr(0, 4);
+  const strangerLevel = Math.floor(Math.random() * 25) + 1;
+  
+  game.friends.push({
+    id: strangerId,
+    name: strangerName,
+    level: strangerLevel,
+    coins: 0,
+    online: true,
+    friendCode: code
+  });
+  
+  showToast(strangerName + ' (Ур.' + strangerLevel + ') добавлен! 👋', 'success');
+  input.value = '';
+  closeModal();
+  renderSocial();
+  saveGame();
+}
+
+/**
+ * Показывает модальное окно с QR-кодом
+ */
+function showQRCodeModal() {
+  const link = getInviteLink();
+  const fullLink = window.location.origin + window.location.pathname + '?ref=' + encodePlayerData();
+  
+  showModal(`
+    <h3 class="russo text-lg mb-3" style="color: var(--accent)" style="text-align: center;">
+      <i class="fas fa-qrcode mr-1"></i>Ваш QR-код
+    </h3>
+    
+    <p class="text-xs text-center mb-3" style="color: var(--muted)">
+      Отсканируйте этот QR-код другом или покажите экран
+    </p>
+    
+    <!-- QR Code Container -->
+    <div class="qr-container scan-animation">
+      <div class="scan-line"></div>
+      <div id="qrCodeCanvas"></div>
+    </div>
+    
+    <div class="qr-instructions">
+      <i class="fas fa-mobile-alt mr-1"></i>
+      Друг может открыть камеру телефона и навести на QR-код
+    </div>
+    
+    <!-- Информация о коде -->
+    <div class="friend-code-display" style="margin-top: 15px;">
+      <div class="code-label">Или поделитесь кодом:</div>
+      <div class="code-text">${game.friendCode}</div>
+    </div>
+    
+    <div class="link-box mt-3" onclick="copyToClipboard('${fullLink}')" title="Нажмите чтобы скопировать">
+      <i class="fas fa-link mr-1"></i>Ссылка: ${fullLink.substring(0, 35)}...
+    </div>
+    
+    <div class="share-buttons" style="margin-top: 12px;">
+      <button class="share-btn share-copy" onclick="copyToClipboard('${fullLink}')">
+        <i class="fas fa-copy"></i> Копировать ссылку
+      </button>
+      <button class="share-btn share-telegram" onclick="shareToTelegram('${fullLink}')">
+        <i class="fab fa-telegram"></i> Telegram
+      </button>
+    </div>
+    
+    <button class="btn btn-secondary w-full mt-3" style="font-size: 12px;" onclick="closeModal()">Закрыть</button>
+  `);
+  
+  // Генерируем QR-код после открытия модального окна
+  setTimeout(() => {
+    generateQRCode(fullLink);
+  }, 100);
+}
+
+/**
+ * Генерирует QR-код в указанном контейнере
+ */
+function generateQRCode(text) {
+  const container = document.getElementById('qrCodeCanvas');
+  if (!container) {
+    console.error('QR container not found');
+    return;
+  }
+  
+  // Очищаем контейнер
+  container.innerHTML = '';
+  
+  try {
+    // Проверяем доступность библиотеки QRCode
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(container, {
+        text: text,
+        width: 180,
+        height: 180,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    } else {
+      // Fallback: показываем текстовую версию
+      container.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #000;">
+          <i class="fas fa-qrcode" style="font-size: 60px; color: var(--accent);"></i>
+          <p style="margin-top: 10px; font-size: 12px;">QR-код недоступен</p>
+          <p style="font-size: 10px; color: #666;">Используйте ссылку выше</p>
+        </div>
+      `;
+    }
+  } catch (e) {
+    console.error('QR generation error:', e);
+    container.innerHTML = '<p style="color: red; padding: 10px;">Ошибка генерации QR</p>';
+  }
+}
+
+/**
+ * Делится ссылкой в Telegram
+ */
+function shareToTelegram(link) {
+  const text = encodeURIComponent('🎮 Присоединяйся ко мне в TapGold! ' + link);
+  const telegramUrl = 'https://t.me/share/url?url=' + link + '&text=' + text;
+  window.open(telegramUrl, '_blank');
+  showToast('Открыт Telegram!', 'info');
+}
+
+/**
+ * Делится ссылкой в WhatsApp
+ */
+function shareToWhatsApp(link) {
+  const text = encodeURIComponent('🎮 Присоединяйся ко мне в TapGold! ' + link);
+  const whatsappUrl = 'https://wa.me/?text=' + text;
+  window.open(whatsappUrl, '_blank');
+  showToast('Открыт WhatsApp!', 'info');
+}
+
+/**
+ * Обновляет список друзей (симуляция подарков)
+ */
+function refreshFriends() {
+  let receivedGift = false;
+  
+  game.friends.forEach(friend => {
+    if (Math.random() < 0.3) friend.online = !friend.online;
+    
+    if (friend.online && Math.random() < 0.25) {
+      const giftAmount = Math.floor(100 + Math.random() * 1000);
+      game.coins += giftAmount;
+      game.totalCoins += giftAmount;
+      showToast(friend.name + ' прислал ' + formatNumber(giftAmount) + ' 💰', 'gold');
+      receivedGift = true;
+    }
+  });
+  
+  if (!receivedGift) {
+    showToast('Обновлено! Подарков пока нет.', 'info');
+  }
+  
+  updateUI();
+  renderSocial();
+  saveGame();
+}
+
+/**
+ * Показывает модальное окно обмена с другом
+ */
+function showTradeModal(friendId) {
+  selectedFriendForTrade = game.friends.find(f => f.id === friendId);
+  if (!selectedFriendForTrade) return;
+  
+  const itemOptions = game.inventory
+    .filter(i => i.quantity > 0)
+    .map(inv => {
+      const item = ITEMS.find(it => it.id === inv.id);
+      return item ? `<option value="${item.id}">${item.name} (x${inv.quantity})</option>` : '';
+    })
+    .join('');
+  
+  showModal(`
+    <h3 class="russo text-lg mb-3" style="color: var(--accent)">
+      <i class="fas fa-right-left mr-1"></i>Обмен: ${selectedFriendForTrade.name}
+    </h3>
+    
+    <div class="mb-3">
+      <div class="text-xs font-bold mb-1" style="color: var(--muted)">Отправить предмет:</div>
+      ${itemOptions 
+        ? `<select id="tradeItem" class="w-full px-2 py-1.5 rounded-lg mb-1 text-sm">${itemOptions}</select>
+           <button class="btn btn-purple w-full" style="font-size: 12px;" onclick="sendTradeItem()">
+             <i class="fas fa-paper-plane"></i> Отправить предмет
+           </button>`
+        : '<div class="text-xs" style="color: var(--muted)">Нет предметов для обмена</div>'
+      }
+    </div>
+    
+    <div class="mb-3">
+      <div class="text-xs font-bold mb-1" style="color: var(--muted)">Отправить золото:</div>
+      <div class="flex gap-2">
+        <input type="number" id="tradeGold" min="100" value="500" class="flex-1 px-2 py-1.5 rounded-lg text-sm">
+        <button class="btn btn-primary" style="font-size: 11px;" onclick="sendTradeGold()">
+          <i class="fas fa-coins"></i>
+        </button>
+      </div>
+    </div>
+    
+    <button class="btn btn-secondary w-full" style="font-size: 12px;" onclick="closeModal()">Закрыть</button>
+  `);
+}
+
+function sendTradeItem() {
+  const select = document.getElementById('tradeItem');
+  if (!select) return;
+  
+  const itemId = select.value;
+  if (!removeItemFromInventory(itemId)) {
+    showToast('Ошибка отправки предмета!', 'error');
+    return;
+  }
+  
+  const item = ITEMS.find(i => i.id === itemId);
+  showToast(item.name + ' отправлен ' + selectedFriendForTrade.name + '! 📦', 'success');
+  closeModal();
+  saveGame();
+}
+
+function sendTradeGold() {
+  const amount = parseInt(document.getElementById('tradeGold')?.value) || 0;
+  if (amount < 100) {
+    showToast('Минимум 100 золота!', 'error');
+    return;
+  }
+  if (game.coins < amount) {
+    showToast('Недостаточно золота!', 'error');
+    return;
+  }
+  
+  game.coins -= amount;
+  showToast(formatNumber(amount) + ' 💰 отправлено ' + selectedFriendForTrade.name + '!', 'success');
+  closeModal();
+  updateUI();
+  saveGame();
+}
+
+function removeFriend(friendId) {
+  const friend = game.friends.find(f => f.id === friendId);
+  game.friends = game.friends.filter(f => f.id !== friendId);
+  showToast((friend?.name || 'Друг') + ' удалён из друзей', 'info');
+  renderSocial();
+  saveGame();
+}
+
+function renderSocial() {
+  const container = document.getElementById('socialContent');
+  
+  if (currentSocialTab === 'friends') {
+    let friendsHTML = '';
+    
+    if (game.friends.length > 0) {
+      friendsHTML = game.friends.map(friend => `
+        <div class="card flex items-center gap-2">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm" 
+               style="background: rgba(245, 166, 35, 0.12); color: var(--accent);">
+            ${friend.name[0]}
+          </div>
+          <div class="flex-1">
+            <div class="font-bold text-sm">${friend.name}</div>
+            <div class="text-xs" style="color: var(--muted)">
+              Ур.${friend.level} · 
+              <span style="color: ${friend.online ? 'var(--success)' : 'var(--muted)'}">
+                <i class="fas fa-circle" style="font-size: 6px;"></i> 
+                ${friend.online ? 'Онлайн' : 'Оффлайн'}
+              </span>
+            </div>
+          </div>
+          <div class="flex gap-1">
+            <button class="btn btn-purple" style="font-size: 10px; padding: 5px 8px;" 
+                    onclick="showTradeModal('${friend.id}')">
+              <i class="fas fa-exchange-alt"></i>
+            </button>
+            <button class="btn btn-secondary" style="font-size: 10px; padding: 5px 8px;" 
+                    onclick="removeFriend('${friend.id}')">
+              <i class="fas fa-user-minus"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      friendsHTML = `
+        <div class="text-center py-6" style="color: var(--muted)">
+          <i class="fas fa-user-friends text-3xl mb-2"></i>
+          <div>У вас пока нет друзей</div>
+          <div class="text-xs mt-1">Добавьте по коду, ссылке или QR-коду!</div>
+        </div>
+      `;
+    }
+    
+    container.innerHTML = `
+      <div class="flex gap-2 mb-3">
+        <button class="btn btn-info flex-1" style="font-size: 12px;" onclick="showAddFriendModal()">
+          <i class="fas fa-user-plus mr-1"></i> Добавить друга
+        </button>
+        <button class="btn btn-secondary" title="Обновить" onclick="refreshFriends()">
+          <i class="fas fa-arrows-rotate"></i>
+        </button>
+      </div>
+      
+      ${friendsHTML}
+      
+      <h3 class="russo text-base mb-2 mt-3" style="color: var(--muted);">
+        <i class="fas fa-robot mr-1"></i>Боты для теста:
+      </h3>
+      ${BOTS.map(bot => `
+        <div class="card flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs" 
+               style="background: var(--card2); color: var(--muted);">
+            ${bot.name[0]}
+          </div>
+          <div class="flex-1 text-sm font-bold">${bot.name}</div>
+          <div class="text-xs" style="color: var(--info);" onclick="copyToClipboard('${bot.friendCode}')" 
+              style="cursor: pointer;" title="Нажмите чтобы скопировать">
+            <i class="fas fa-copy mr-1"></i>${bot.friendCode}
+          </div>
+        </div>
+      `).join('')}
+    `;
+    
+  } else { // leaderboard
+    const leaderboard = [
+      { name: '🐉 Дракон777', level: 30, coins: 3500000 },
+      { name: '⚔️ Рыцарь', level: 22, coins: 1200000 },
+      { name: '⭐ ' + game.playerName + ' (Вы)', level: game.level, coins: game.totalCoins, isMe: true }
+    ];
+    
+    leaderboard.sort((a, b) => b.coins - a.coins);
+    
+    container.innerHTML = `
+      <div class="card">
+        ${leaderboard.map((player, index) => `
+          <div class="flex items-center gap-2 py-1.5 ${index < leaderboard.length - 1 ? 'border-b' : ''}" 
+               style="border-color: var(--border); ${player.isMe ? 'background: rgba(245, 166, 35, 0.07); border-radius: 10px; padding: 8px;' : ''}">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" 
+                 style="background: ${index < 3 
+                   ? ['linear-gradient(135deg, #ffd700, #ff8c00)', 'linear-gradient(135deg, #c0c0c0, #8a8a8a)', 'linear-gradient(135deg, #cd7f32, #8b4513)'][index]
+                   : 'var(--card2)'
+                 }; color: ${index < 3 ? '#000' : 'var(--muted)'};">
+              ${index + 1}
+            </div>
+            <div class="flex-1 text-sm font-bold" style="${player.isMe ? 'color: var(--accent)' : ''}">${player.name}</div>
+            <div class="text-sm font-bold" style="color: var(--gold)">${formatNumber(player.coins)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+}
+
+// ==================== PROFILE ====================
+function showProfile() {
+  let authHTML = '';
+  
+  if (game.isVerified) {
+    authHTML = `
+      <div class="card" style="border-color: var(--success); margin-bottom: 12px;">
+        <div class="flex items-center justify-between mb-1">
+          <span class="verified-badge"><i class="fas fa-check-circle"></i> Аккаунт привязан</span>
+          <button class="btn btn-secondary" style="font-size: 10px; padding: 3px 8px;" onclick="logoutAuth()">
+            <i class="fas fa-right-from-bracket"></i>
+          </button>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <i class="fas ${game.authMethod === 'google' ? 'fab fa-google' : 'fas fa-envelope'}" 
+             style="color: ${game.authMethod === 'google' ? '#EA4335' : 'var(--info)'}"></i>
+          <span class="text-sm font-bold">${game.authEmail}</span>
+        </div>
+      </div>
+    `;
+  } else {
+    authHTML = `
+      <div class="card" style="border-color: var(--danger); margin-bottom: 12px;">
+        <div class="text-xs font-bold mb-1" style="color: var(--danger)">
+          <i class="fas fa-exclamation-triangle mr-1"></i>Аккаунт не привязан
+        </div>
+        <div class="text-xs mb-2" style="color: var(--muted)">Войдите, чтобы не потерять прогресс!</div>
+        <button class="btn btn-info w-full" style="font-size: 12px;" onclick="showAuthModal()">
+          <i class="fas fa-shield-halved mr-1"></i> Привязать аккаунт
+        </button>
+      </div>
+    `;
+  }
+  
+  showModal(`
+    <h3 class="russo text-lg mb-3" style="color: var(--accent)">
+      <i class="fas fa-user-circle mr-1"></i>Профиль игрока
+    </h3>
+    
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" 
+           style="background: rgba(245, 166, 35, 0.13); color: var(--accent);">
+        ${game.playerName[0]}
+      </div>
+      <div>
+        <div class="russo">${game.playerName}</div>
+        <div class="text-xs" style="color: var(--muted)">Уровень ${game.level} · Друзей: ${game.friends.length}</div>
+      </div>
+    </div>
+    
+    ${authHTML}
+    
+    <div class="card" style="border-color: var(--info); margin-bottom: 12px;">
+      <div class="text-xs font-bold mb-1" style="color: var(--muted)">
+        <i class="fas fa-key mr-1"></i>Ваш код дружбы:
+      </div>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="russo" style="color: var(--info); font-size: 16px;">${game.friendCode}</span>
+        <button class="btn btn-info" style="padding: 4px 8px; font-size: 11px;" 
+                onclick="copyToClipboard('${game.friendCode}')">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="mb-3">
+      <label class="text-xs font-bold" style="color: var(--muted)">Сменить имя:</label>
+      <div class="flex gap-2 mt-1">
+        <input type="text" id="newNameInput" maxlength="16" value="${game.playerName}" 
+               class="flex-1 px-2 py-1.5 rounded-lg text-sm">
+        <button class="btn btn-primary" style="padding: 6px 12px;" onclick="changeName()">
+          <i class="fas fa-check"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="card" style="margin: 0;">
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div><i class="fas fa-hand-pointer mr-1" style="color: var(--accent)"></i>Кликов: <b>${formatNumber(game.totalClicks)}</b></div>
+        <div><i class="fas fa-coins mr-1" style="color: var(--gold)"></i>Всего: <b style="color: var(--gold)">${formatNumber(game.totalCoins)}</b></div>
+        <div><i class="fas fa-chart-line mr-1" style="color: var(--crypto-up)"></i>$GCLK: <b>${formatDecimal(game.tokens)}</b></div>
+        <div><i class="fas fa-lock mr-1" style="color: var(--accent)"></i>Стейк: <b>${formatDecimal(game.stakeAmount)}</b></div>
+      </div>
+    </div>
+    
+    <button class="btn btn-danger w-full mt-3 text-xs" onclick="resetGameConfirm()">
+      <i class="fas fa-trash mr-1"></i> Сбросить прогресс
+    </button>
+  `);
+}
+
+function changeName() {
+  const input = document.getElementById('newNameInput');
+  const newName = input.value.trim();
+  if (!newName) {
+    showToast('Имя не может быть пустым!', 'error');
+    return;
+  }
+  
+  game.playerName = newName;
+  showToast('Имя изменено: ' + newName, '✨');
+  updateUI();
+  closeModal();
+  saveGame();
+}
+
+function resetGameConfirm() {
+  if (!resetConfirm) {
+    resetConfirm = true;
+    showToast('Нажмите ещё раз для подтверждения! ⚠️', 'error');
+    return;
+  }
+  
+  if (confirm('Вы уверены? Весь прогресс будет потерян!')) {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+}
+
+// ==================== AUTH (SIMULATION) ====================
+function showAuthModal() {
+  showModal(`
+    <h3 class="russo text-lg mb-3" style="color: var(--accent)">
+      <i class="fas fa-shield-halved mr-1"></i>Привязка аккаунта
+    </h3>
+    <p class="text-xs mb-4" style="color: var(--muted)">Сохраните прогресс и играйте с любого устройства!</p>
+    
+    <button class="auth-btn auth-google mb-2" onclick="simulateGoogleAuth()">
+      <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Войти через Google
+    </button>
+    
+    <div class="flex items-center gap-3 my-3">
+      <hr class="flex-1 border-gray-700">
+      <span class="text-xs text-gray-500">ИЛИ</span>
+      <hr class="flex-1 border-gray-700">
+    </div>
+    
+    <div class="mb-3">
+      <input type="email" id="authEmail" placeholder="Ваш Email" 
+             class="w-full px-3 py-2 rounded-lg text-sm">
+    </div>
+    <div class="mb-3">
+      <input type="password" id="authPassword" placeholder="Пароль" 
+             class="w-full px-3 py-2 rounded-lg text-sm">
+    </div>
+    <button class="auth-btn auth-email mb-3" onclick="simulateEmailAuth()">
+      <i class="fas fa-envelope mr-1"></i> Войти по почте
+    </button>
+    
+    <div class="text-center">
+      <button class="btn btn-secondary text-xs" onclick="closeModal()">Пропустить</button>
+    </div>
+    <p class="text-center text-[10px] mt-2" style="color: var(--muted)">
+      ⚠️ Демо: данные сохраняются локально
+    </p>
+  `);
+}
+
+function simulateGoogleAuth() {
+  closeModal();
+  showToast('Подключение к Google...', 'info');
+  
+  setTimeout(() => {
+    const email = game.playerName.toLowerCase().replace(/\s/g, '') + '@gmail.com';
+    game.authEmail = email;
+    game.authMethod = 'google';
+    game.isVerified = true;
+    
+    showToast('Google аккаунт подключён! ✅', 'success');
+    saveGame();
+    showProfile();
+  }, 1500);
+}
+
+function simulateEmailAuth() {
+  const email = document.getElementById('authEmail')?.value?.trim();
+  const password = document.getElementById('authPassword')?.value;
+  
+  if (!email || !email.includes('@')) {
+    showToast('Введите корректный email!', 'error');
+    return;
+  }
+  if (!password || password.length < 3) {
+    showToast('Пароль минимум 3 символа!', 'error');
+    return;
+  }
+  
+  closeModal();
+  showToast('Проверка данных...', 'info');
+  
+  setTimeout(() => {
+    game.authEmail = email;
+    game.authMethod = 'email';
+    game.isVerified = true;
+    
+    showToast('Аккаунт успешно привязан! ✅', 'success');
+    saveGame();
+    showProfile();
+  }, 1000);
+}
+
+function logoutAuth() {
+  game.authEmail = '';
+  game.authMethod = '';
+  game.isVerified = false;
+  showToast('Вы вышли из аккаунта', 'info');
+  saveGame();
+  showProfile();
+}
+
+// ==================== UI UPDATE ====================
+let uiUpdateTimeout = null;
+
+function updateUI() {
+  if (uiUpdateTimeout) return;
+  
+  uiUpdateTimeout = setTimeout(() => {
+    uiUpdateTimeout = null;
+    doUpdateUI();
+  }, 40);
+}
+
+function doUpdateUI() {
+  document.getElementById('headerCoins').textContent = formatNumber(game.coins);
+  document.getElementById('headerName').textContent = game.playerName;
+  document.getElementById('mainCoins').textContent = formatNumber(game.coins);
+  document.getElementById('powerDisplay').textContent = formatNumber(game.power);
+  document.getElementById('levelDisplay').textContent = game.level;
+  document.getElementById('xpBar').style.width = (game.xp / game.xpNeeded * 100) + '%';
+  document.getElementById('xpCurrent').textContent = formatNumber(game.xp);
+  document.getElementById('xpNeeded').textContent = formatNumber(game.xpNeeded);
+  
+  const autoDisplay = document.getElementById('autoDisplay');
+  if (game.autoIncome > 0) {
+    autoDisplay.style.display = 'flex';
+    document.getElementById('autoRate').textContent = formatNumber(game.autoIncome) + '/с';
+  } else {
+    autoDisplay.style.display = 'none';
+  }
+  
+  const dailyBtn = document.getElementById('dailyBtn');
+  const dailyTimer = document.getElementById('dailyTimer');
+  
+  if (game.lastDailyTime && Date.now() - game.lastDailyTime < 86400000) {
+    const remaining = 86400000 - (Date.now() - game.lastDailyTime);
+    dailyTimer.textContent = 'Через ' + Math.floor(remaining / 3600000) + 'ч ' + 
+                             Math.floor((remaining % 3600000) / 60000) + 'м';
+    dailyBtn.disabled = true;
+  } else {
+    dailyTimer.textContent = '✅ Доступен!';
+    dailyBtn.disabled = false;
+  }
+  
+  updateQuestBadge();
+}
+
+// ==================== BACKGROUND ANIMATION ====================
+function initBackgroundAnimation() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  const particles = [];
+  
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  
+  resize();
+  window.addEventListener('resize', resize);
+  
+  for (let i = 0; i < 30; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      radius: Math.random() * 1.5 + 0.5,
+      vx: (Math.random() - 0.5) * 0.2,
+      vy: -(Math.random() * 0.2 + 0.05),
+      alpha: Math.random() * 0.25 + 0.05
+    });
+  }
+  
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      if (p.y < -5) {
+        p.y = canvas.height + 5;
+        p.x = Math.random() * canvas.width;
+      }
+      
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245, 166, 35, ' + p.alpha + ')';
+      ctx.fill();
+    });
+    
+    requestAnimationFrame(animate);
+  }
+  
+  animate();
+}
+
+// ==================== GAME LOOPS ====================
+setInterval(() => {
+  if (game.autoIncome > 0) {
+    const gain = game.autoIncome / 10;
+    game.coins += gain;
+    game.totalCoins += gain;
+    game.xp += Math.max(0.1, gain / 50);
+    
+    checkLevelUp();
+    updateUI();
+  }
+}, 100);
+
+setInterval(() => {
+  if (game.stakeAmount > 0) {
+    const gain = Math.floor(game.stakeAmount * game.tokenPrice * 0.1 / 3600 * 10);
+    if (gain > 0) {
+      game.coins += gain;
+      game.totalCoins += gain;
+      updateUI();
+    }
+  }
+}, 100);
+
+setInterval(updateTokenPrice, 3000);
+
+setInterval(() => {
+  ACHIEVEMENTS.forEach(a => {
+    game.questProgress['a_' + a.id] = getAchievementValue(a.type);
+  });
+  
+  getDailyQuests().forEach(q => {
+    if (q.claimed) return;
+    
+    let value = 0;
+    switch (q.type) {
+      case 'clicks': value = game.totalClicks; break;
+      case 'earn': value = game.totalCoins; break;
+      case 'buy': value = game.totalBuys; break;
+      case 'sell': value = game.itemsSold; break;
+      case 'level': value = game.level; break;
+    }
+    
+    game.questProgress[q.key] = Math.min(q.target, value);
+  });
+  
+  updateQuestBadge();
+}, 2500);
+
+setInterval(saveGame, 6000);
+window.addEventListener('beforeunload', saveGame);
+
+setInterval(() => {
+  if (game.friends.length && Math.random() < 0.08) {
+    const randomFriend = game.friends[Math.floor(Math.random() * game.friends.length)];
+    const giftAmount = Math.floor(100 + Math.random() * 400);
+    
+    game.coins += giftAmount;
+    game.totalCoins += giftAmount;
+    showToast(randomFriend.name + ' прислал ' + formatNumber(giftAmount) + ' 🎁', 'gold');
+    updateUI();
+    saveGame();
+  }
+}, 35000);
+
+setInterval(() => {
+  if (game.friends.length < 12 && Math.random() < 0.03) {
+    const strangerId = 't_' + Date.now();
+    const strangerName = 'Странник_' + Math.random().toString(36).substr(2, 4).toUpperCase();
+    const strangerLevel = Math.floor(Math.random() * 15) + 5;
+    
+    game.friends.push({
+      id: strangerId,
+      name: strangerName,
+      level: strangerLevel,
+      coins: 0,
+      online: true,
+      friendCode: generateFriendCode()
+    });
+    
+    showToast(strangerName + ' нашёл ваш код! 🔍', 'info');
+    
+    if (currentScreen === 'social') renderSocial();
+    saveGame();
+  }
+}, 50000);
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', function() {
+  loadGame();
+  initBackgroundAnimation();
+  
+  document.getElementById('coinZone').addEventListener('click', handleCoinClick);
+  
+  updateUI();
+  
+  // Проверяем URL на наличие приглашения
+  checkFriendRequestFromURL();
+  
+  // Показываем приветствие новым игрокам
+  if (game.totalClicks === 0 && game.playerName === 'Игрок') {
+    setTimeout(() => {
+      showModal(`
+        <h3 class="russo text-lg mb-3" style="color: var(--accent)">
+          🎮 Добро пожаловать в TapGold!
+        </h3>
+        <p class="text-xs mb-3" style="color: var(--muted)">Введите ваше имя для начала игры:</p>
+        <input type="text" id="welcomeName" maxlength="16" placeholder="Ваше имя..." 
+               class="w-full px-2 py-1.5 rounded-lg mb-3 text-sm" autofocus>
+        <button class="btn btn-primary w-full" style="font-size: 13px;" onclick="startGame()">
+          <i class="fas fa-play"></i> Начать игру!
+        </button>
+        
+        <hr style="border-color: var(--border); margin: 15px 0;">
+        
+        <div class="text-xs text-center" style="color: var(--muted);">
+          <p class="mb-2">💡 <b>Совет:</b> Добавляйте друзей по коду, ссылке или QR-коду!</p>
+          <p>🔗 Поделитесь ссылкой: <span style="color: var(--accent); cursor: pointer;" 
+                   onclick="copyToClipboard(window.location.href)">скопировать</span></p>
+        </div>
+      `);
+      
+      setTimeout(() => {
+        const nameInput = document.getElementById('welcomeName');
+        if (nameInput) nameInput.focus();
+      }, 50);
+    }, 100);
+  }
+});
+
+function startGame() {
+  const nameInput = document.getElementById('welcomeName');
+  const name = nameInput.value.trim() || 'Игрок';
+  
+  game.playerName = name;
+  closeModal();
+  updateUI();
+  saveGame();
+  
+  showToast('Приятной игры, ' + name + '! 🎉', 'gold');
+}
+</script>
+
+</body>
+</html>
